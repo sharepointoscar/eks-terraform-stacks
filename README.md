@@ -70,6 +70,62 @@ git clone <repository-url>
 cd eks-terraform-stacks
 ```
 
+## AWS Authentication Setup
+
+Terraform Stacks runs remotely in HCP Terraform and requires OIDC-based authentication to access your AWS account. Run the provided setup script to create the necessary IAM role and trust policy.
+
+### Option 1: Use the Setup Script (Recommended)
+
+```bash
+# Run the setup script with your HCP Terraform details
+./scripts/setup-aws-oidc.sh <HCP_ORG> <HCP_PROJECT> <STACK_NAME>
+
+# Example:
+./scripts/setup-aws-oidc.sh my-org my-project eks-multi-region
+```
+
+The script will:
+1. Create an OIDC Identity Provider for HCP Terraform (if not exists)
+2. Create an IAM role with the appropriate trust policy
+3. Attach AdministratorAccess policy
+4. Output the Role ARN to use in HCP Terraform
+
+### Option 2: Manual Setup
+
+If you prefer to create the IAM role manually:
+
+1. **Create OIDC Identity Provider** in AWS IAM for `app.terraform.io`
+2. **Create IAM Role** with this trust policy:
+
+```json
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Effect": "Allow",
+      "Principal": {
+        "Federated": "arn:aws:iam::<AWS_ACCOUNT_ID>:oidc-provider/app.terraform.io"
+      },
+      "Action": "sts:AssumeRoleWithWebIdentity",
+      "Condition": {
+        "StringEquals": {
+          "app.terraform.io:aud": "aws.workload.identity"
+        },
+        "StringLike": {
+          "app.terraform.io:sub": "organization:<HCP_ORG>:project:<PROJECT>:stack:<STACK>:*"
+        }
+      }
+    }
+  ]
+}
+```
+
+3. **Attach permissions** (AdministratorAccess for workshop, or least-privilege for production)
+
+### Configure the Role ARN in HCP Terraform
+
+After creating the IAM role, set the `aws_role_arn` variable in HCP Terraform to the Role ARN output by the script.
+
 ## Deployment
 
 This project uses **Terraform Stacks**, which deploys remotely via HCP Terraform.
@@ -165,6 +221,8 @@ Destroy the stack through HCP Terraform UI or CLI. The stack will destroy all co
 ├── components.tfcomponent.hcl   # Stack component definitions (vpc, eks, addons)
 ├── deployments.tfdeploy.hcl     # Multi-region deployment configurations
 ├── README.md
+├── scripts/
+│   └── setup-aws-oidc.sh        # Script to create AWS IAM role for OIDC auth
 └── modules/
     ├── vpc/                     # VPC module (terraform-aws-modules/vpc/aws)
     │   ├── main.tf

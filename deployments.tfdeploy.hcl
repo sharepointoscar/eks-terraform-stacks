@@ -4,6 +4,24 @@
 ################################################################################
 
 #-------------------------------------------------------------------------------
+# OIDC Authentication for AWS
+# HCP Terraform uses this token to assume the AWS IAM role
+#-------------------------------------------------------------------------------
+
+identity_token "aws" {
+  audience = ["aws.workload.identity"]
+}
+
+#-------------------------------------------------------------------------------
+# Variables
+#-------------------------------------------------------------------------------
+
+variable "aws_role_arn" {
+  type        = string
+  description = "ARN of the IAM role for HCP Terraform to assume via OIDC"
+}
+
+#-------------------------------------------------------------------------------
 # US East (N. Virginia) - us-east-1
 #-------------------------------------------------------------------------------
 
@@ -19,6 +37,10 @@ deployment "use1" {
       Region      = "us-east-1"
       ManagedBy   = "terraform-stacks"
     }
+
+    # OIDC authentication
+    role_arn       = var.aws_role_arn
+    identity_token = identity_token.aws.jwt
   }
 }
 
@@ -38,6 +60,10 @@ deployment "usw2" {
       Region      = "us-west-2"
       ManagedBy   = "terraform-stacks"
     }
+
+    # OIDC authentication
+    role_arn       = var.aws_role_arn
+    identity_token = identity_token.aws.jwt
   }
 }
 
@@ -57,5 +83,9 @@ deployment "euc1" {
       Region      = "eu-central-1"
       ManagedBy   = "terraform-stacks"
     }
+
+    # OIDC authentication
+    role_arn       = var.aws_role_arn
+    identity_token = identity_token.aws.jwt
   }
 }

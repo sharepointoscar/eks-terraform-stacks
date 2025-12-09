@@ -48,16 +48,28 @@ required_providers {
 #-------------------------------------------------------------------------------
 
 # Primary AWS provider for the deployment region
+# Uses OIDC authentication for HCP Terraform
 provider "aws" "main" {
   config {
     region = var.region
+
+    assume_role_with_web_identity {
+      role_arn           = var.role_arn
+      web_identity_token = var.identity_token
+    }
   }
 }
 
 # AWS provider for us-east-1 (required for ECR public authentication)
+# Uses OIDC authentication for HCP Terraform
 provider "aws" "virginia" {
   config {
     region = "us-east-1"
+
+    assume_role_with_web_identity {
+      role_arn           = var.role_arn
+      web_identity_token = var.identity_token
+    }
   }
 }
 
@@ -109,6 +121,17 @@ provider "random" "main" {
 variable "region" {
   type        = string
   description = "AWS region for deployment"
+}
+
+variable "role_arn" {
+  type        = string
+  description = "ARN of the IAM role for HCP Terraform to assume via OIDC"
+}
+
+variable "identity_token" {
+  type        = string
+  ephemeral   = true
+  description = "OIDC identity token from HCP Terraform"
 }
 
 variable "cluster_name" {
