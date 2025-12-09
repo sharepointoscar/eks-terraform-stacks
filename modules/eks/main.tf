@@ -61,3 +61,12 @@ module "eks" {
     "karpenter.sh/discovery" = var.cluster_name
   })
 }
+
+################################################################################
+# Cluster Authentication Token
+# Required for kubernetes/helm providers in Terraform Stacks (remote execution)
+################################################################################
+
+data "aws_eks_cluster_auth" "this" {
+  name = module.eks.cluster_name
+}

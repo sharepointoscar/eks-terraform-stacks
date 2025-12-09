@@ -41,3 +41,9 @@ output "node_security_group_id" {
   description = "Security group ID attached to the EKS nodes"
   value       = module.eks.node_security_group_id
 }
+
+output "cluster_token" {
+  description = "Authentication token for the EKS cluster (short-lived)"
+  value       = data.aws_eks_cluster_auth.this.token
+  sensitive   = true
+}

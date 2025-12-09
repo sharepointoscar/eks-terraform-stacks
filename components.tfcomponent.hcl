@@ -62,30 +62,22 @@ provider "aws" "virginia" {
 }
 
 # Kubernetes provider configuration
+# Uses token-based auth (required for Terraform Stacks remote execution)
 provider "kubernetes" "main" {
   config {
     host                   = component.eks.cluster_endpoint
     cluster_ca_certificate = base64decode(component.eks.cluster_certificate_authority_data)
-
-    exec {
-      api_version = "client.authentication.k8s.io/v1beta1"
-      command     = "aws"
-      args        = ["eks", "get-token", "--cluster-name", var.cluster_name, "--region", var.region]
-    }
+    token                  = component.eks.cluster_token
   }
 }
 
 # Helm provider configuration
+# Uses token-based auth (required for Terraform Stacks remote execution)
 provider "helm" "main" {
   config {
     host                   = component.eks.cluster_endpoint
     cluster_ca_certificate = base64decode(component.eks.cluster_certificate_authority_data)
-
-    exec {
-      api_version = "client.authentication.k8s.io/v1beta1"
-      command     = "aws"
-      args        = ["eks", "get-token", "--cluster-name", var.cluster_name, "--region", var.region]
-    }
+    token                  = component.eks.cluster_token
   }
 }
 
