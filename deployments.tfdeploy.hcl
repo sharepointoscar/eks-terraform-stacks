@@ -26,7 +26,7 @@ locals {
 #-------------------------------------------------------------------------------
 
 deployment "use1" {
-  destroy = true
+  destroy = false
 
   inputs = {
     region          = "us-east-1"
@@ -51,7 +51,7 @@ deployment "use1" {
 #-------------------------------------------------------------------------------
 
 deployment "usw2" {
-  destroy = true
+  destroy = false
 
   inputs = {
     region          = "us-west-2"
@@ -76,7 +76,7 @@ deployment "usw2" {
 #-------------------------------------------------------------------------------
 
 deployment "euc1" {
-  destroy = true
+  destroy = false
 
   inputs = {
     region          = "eu-central-1"
