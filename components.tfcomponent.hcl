@@ -72,13 +72,9 @@ provider "kubernetes" "main" {
 }
 
 # Helm provider configuration
-# Uses token-based auth (required for Terraform Stacks remote execution)
+# Inherits kubernetes configuration when both providers are passed to a component
 provider "helm" "main" {
-  config {
-    host                   = component.eks.cluster_endpoint
-    cluster_ca_certificate = base64decode(component.eks.cluster_certificate_authority_data)
-    token                  = component.eks.cluster_token
-  }
+  config {}
 }
 
 # TLS provider (required by EKS module)
