@@ -47,12 +47,6 @@ module "eks" {
       labels = {
         "karpenter.sh/controller" = "true"
       }
-
-      taints = [{
-        key    = "karpenter.sh/controller"
-        value  = "true"
-        effect = "NO_SCHEDULE"
-      }]
     }
   }
 
