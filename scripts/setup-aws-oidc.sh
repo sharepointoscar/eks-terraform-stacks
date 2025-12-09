@@ -22,24 +22,20 @@ NC='\033[0m' # No Color
 #-------------------------------------------------------------------------------
 # Input validation
 #-------------------------------------------------------------------------------
-if [ $# -ne 3 ]; then
-    echo -e "${RED}Error: Missing required arguments${NC}"
+if [ $# -ne 1 ]; then
+    echo -e "${RED}Error: Missing required argument${NC}"
     echo ""
-    echo "Usage: $0 <HCP_ORG> <HCP_PROJECT> <STACK_NAME>"
+    echo "Usage: $0 <HCP_ORG>"
     echo ""
     echo "Arguments:"
-    echo "  HCP_ORG      - Your HCP Terraform organization name"
-    echo "  HCP_PROJECT  - Your HCP Terraform project name"
-    echo "  STACK_NAME   - Your Terraform Stack name"
+    echo "  HCP_ORG - Your HCP Terraform organization name"
     echo ""
     echo "Example:"
-    echo "  $0 my-org my-project eks-multi-region"
+    echo "  $0 my-org"
     exit 1
 fi
 
 HCP_ORG="$1"
-HCP_PROJECT="$2"
-STACK_NAME="$3"
 
 #-------------------------------------------------------------------------------
 # Get AWS Account ID
@@ -103,7 +99,7 @@ TRUST_POLICY=$(cat <<EOF
           "app.terraform.io:aud": "aws.workload.identity"
         },
         "StringLike": {
-          "app.terraform.io:sub": "organization:${HCP_ORG}:project:${HCP_PROJECT}:stack:${STACK_NAME}:*"
+          "app.terraform.io:sub": "organization:${HCP_ORG}:*"
         }
       }
     }

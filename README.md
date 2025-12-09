@@ -77,11 +77,11 @@ Terraform Stacks runs remotely in HCP Terraform and requires OIDC-based authenti
 ### Option 1: Use the Setup Script (Recommended)
 
 ```bash
-# Run the setup script with your HCP Terraform details
-./scripts/setup-aws-oidc.sh <HCP_ORG> <HCP_PROJECT> <STACK_NAME>
+# Run the setup script with your HCP Terraform organization name
+./scripts/setup-aws-oidc.sh <HCP_ORG>
 
 # Example:
-./scripts/setup-aws-oidc.sh my-org my-project eks-multi-region
+./scripts/setup-aws-oidc.sh my-org
 ```
 
 The script will:
@@ -112,7 +112,7 @@ If you prefer to create the IAM role manually:
           "app.terraform.io:aud": "aws.workload.identity"
         },
         "StringLike": {
-          "app.terraform.io:sub": "organization:<HCP_ORG>:project:<PROJECT>:stack:<STACK>:*"
+          "app.terraform.io:sub": "organization:<HCP_ORG>:*"
         }
       }
     }
