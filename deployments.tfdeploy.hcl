@@ -26,6 +26,8 @@ locals {
 #-------------------------------------------------------------------------------
 
 deployment "use1" {
+  destroy = true
+
   inputs = {
     region          = "us-east-1"
     cluster_name    = "eks-use1"
@@ -41,8 +43,6 @@ deployment "use1" {
     # OIDC authentication
     role_arn       = local.aws_role_arn
     identity_token = identity_token.aws.jwt
-
-    destroy = true
   }
 }
 
@@ -51,6 +51,8 @@ deployment "use1" {
 #-------------------------------------------------------------------------------
 
 deployment "usw2" {
+  destroy = true
+
   inputs = {
     region          = "us-west-2"
     cluster_name    = "eks-usw2"
@@ -66,8 +68,6 @@ deployment "usw2" {
     # OIDC authentication
     role_arn       = local.aws_role_arn
     identity_token = identity_token.aws.jwt
-
-    destroy = true
   }
 }
 
@@ -76,6 +76,8 @@ deployment "usw2" {
 #-------------------------------------------------------------------------------
 
 deployment "euc1" {
+  destroy = true
+
   inputs = {
     region          = "eu-central-1"
     cluster_name    = "eks-euc1"
@@ -91,7 +93,5 @@ deployment "euc1" {
     # OIDC authentication
     role_arn       = local.aws_role_arn
     identity_token = identity_token.aws.jwt
-
-    destroy = true
   }
 }
