@@ -13,12 +13,12 @@ identity_token "aws" {
 }
 
 #-------------------------------------------------------------------------------
-# Variables
+# Local Values
+# UPDATE: Replace with your IAM role ARN from scripts/setup-aws-oidc.sh output
 #-------------------------------------------------------------------------------
 
-variable "aws_role_arn" {
-  type        = string
-  description = "ARN of the IAM role for HCP Terraform to assume via OIDC"
+locals {
+  aws_role_arn = "arn:aws:iam::865855451418:role/hcp-terraform-stacks-role"
 }
 
 #-------------------------------------------------------------------------------
@@ -39,7 +39,7 @@ deployment "use1" {
     }
 
     # OIDC authentication
-    role_arn       = var.aws_role_arn
+    role_arn       = local.aws_role_arn
     identity_token = identity_token.aws.jwt
   }
 }
@@ -62,7 +62,7 @@ deployment "usw2" {
     }
 
     # OIDC authentication
-    role_arn       = var.aws_role_arn
+    role_arn       = local.aws_role_arn
     identity_token = identity_token.aws.jwt
   }
 }
@@ -85,7 +85,7 @@ deployment "euc1" {
     }
 
     # OIDC authentication
-    role_arn       = var.aws_role_arn
+    role_arn       = local.aws_role_arn
     identity_token = identity_token.aws.jwt
   }
 }
