@@ -35,25 +35,17 @@ module "eks" {
     }
   }
 
-  # Managed Node Group for Karpenter Controller
-  # This node group runs the Karpenter controller pods
+  # Managed Node Group for cluster workloads
   eks_managed_node_groups = {
-    karpenter = {
-      instance_types = var.karpenter_node_instance_types
-      min_size       = var.karpenter_node_min_size
-      max_size       = var.karpenter_node_max_size
-      desired_size   = var.karpenter_node_desired_size
-
-      labels = {
-        "karpenter.sh/controller" = "true"
-      }
+    default = {
+      instance_types = var.node_instance_types
+      min_size       = var.node_min_size
+      max_size       = var.node_max_size
+      desired_size   = var.node_desired_size
     }
   }
 
-  tags = merge(var.tags, {
-    # Tag for Karpenter auto-discovery
-    "karpenter.sh/discovery" = var.cluster_name
-  })
+  tags = var.tags
 }
 
 ################################################################################

@@ -44,14 +44,19 @@ This stack contains three components that are deployed together:
 
 | Component | Module | Purpose |
 |-----------|--------|---------|
-| `vpc` | `terraform-aws-modules/vpc/aws` | VPC with public/private subnets, Karpenter discovery tags |
-| `eks` | `terraform-aws-modules/eks/aws` | EKS cluster + managed node group for Karpenter controller |
-| `addons` | `aws-ia/eks-blueprints-addons/aws` | Karpenter + AWS Load Balancer Controller |
+| `vpc` | `terraform-aws-modules/vpc/aws` | VPC with public/private subnets |
+| `eks` | `terraform-aws-modules/eks/aws` | EKS cluster + managed node group |
+| `addons` | `aws-ia/eks-blueprints-addons/aws` | AWS Load Balancer Controller |
+| `karpenter` | `terraform-aws-modules/eks//modules/karpenter` | **Optional** - Kubernetes node autoscaler |
 
 ### Addons Deployed
 
-- **[Karpenter](https://karpenter.sh/)** - Kubernetes node autoscaler for dynamic EC2 provisioning
 - **[AWS Load Balancer Controller](https://kubernetes-sigs.github.io/aws-load-balancer-controller/)** - Manages ALB/NLB for Kubernetes services
+
+### Optional: Karpenter (Advanced Exercise)
+
+- **[Karpenter](https://karpenter.sh/)** - Kubernetes node autoscaler for dynamic EC2 provisioning
+- See [Karpenter Advanced Exercise](docs/karpenter-advanced-exercise.md) for step-by-step instructions
 
 ## Prerequisites
 
@@ -189,29 +194,26 @@ aws eks --region eu-central-1 update-kubeconfig --name eks-euc1
 # Check nodes
 kubectl get nodes
 
-# Check Karpenter
-kubectl get pods -n karpenter
-
 # Check AWS Load Balancer Controller
 kubectl get pods -n kube-system -l app.kubernetes.io/name=aws-load-balancer-controller
 ```
 
 ## Teardown
 
-**IMPORTANT:** Karpenter-provisioned EC2 instances exist outside Terraform's management and must be removed first.
-
-```bash
-# 1. Remove Karpenter-provisioned nodes (for each cluster)
-kubectl delete nodepools --all
-kubectl delete ec2nodeclasses --all
-
-# Wait for nodes to terminate
-kubectl get nodes -w
-```
-
 ### Destroy Stack
 
-Destroy the stack through HCP Terraform UI or CLI. The stack will destroy all components (addons, eks, vpc) in the correct dependency order.
+To destroy the infrastructure, set `destroy = true` in `deployments.tfdeploy.hcl` for each deployment:
+
+```hcl
+deployment "use1" {
+  destroy = true
+  # ...
+}
+```
+
+Commit and push the changes. HCP Terraform will destroy all components (addons, eks, vpc) in the correct dependency order.
+
+> **Note:** If you enabled Karpenter (advanced exercise), you must first remove Karpenter-provisioned nodes before destroying. See [Karpenter Cleanup](docs/karpenter-advanced-exercise.md#cleanup-before-destroy).
 
 ## Project Structure
 
@@ -221,8 +223,11 @@ Destroy the stack through HCP Terraform UI or CLI. The stack will destroy all co
 ├── components.tfcomponent.hcl   # Stack component definitions (vpc, eks, addons)
 ├── deployments.tfdeploy.hcl     # Multi-region deployment configurations
 ├── README.md
+├── docs/
+│   └── karpenter-advanced-exercise.md  # Optional Karpenter integration guide
 ├── scripts/
-│   └── setup-aws-oidc.sh        # Script to create AWS IAM role for OIDC auth
+│   ├── setup-aws-oidc.sh        # Script to create AWS IAM role for OIDC auth
+│   └── enable-karpenter.sh      # Helper script for Karpenter integration
 └── modules/
     ├── vpc/                     # VPC module (terraform-aws-modules/vpc/aws)
     │   ├── main.tf
@@ -232,8 +237,13 @@ Destroy the stack through HCP Terraform UI or CLI. The stack will destroy all co
     │   ├── main.tf
     │   ├── variables.tf
     │   └── outputs.tf
-    └── eks-blueprints-addons/   # Addons module (aws-ia/eks-blueprints-addons/aws)
-        ├── main.tf
+    ├── eks-blueprints-addons/   # Addons module (aws-ia/eks-blueprints-addons/aws)
+    │   ├── main.tf
+    │   ├── variables.tf
+    │   ├── outputs.tf
+    │   └── providers.tf
+    └── karpenter/               # Optional: Karpenter module
+        ├── main.tf              # Helm release + NodePool/EC2NodeClass
         ├── variables.tf
         ├── outputs.tf
         └── providers.tf
@@ -244,7 +254,8 @@ Destroy the stack through HCP Terraform UI or CLI. The stack will destroy all co
 - [AWS EKS Blueprints for Terraform](https://github.com/aws-ia/terraform-aws-eks-blueprints)
 - [EKS Blueprints Addons](https://github.com/aws-ia/terraform-aws-eks-blueprints-addons)
 - [EKS Blueprints Getting Started](https://aws-ia.github.io/terraform-aws-eks-blueprints/getting-started/)
-- [Karpenter Pattern](https://aws-ia.github.io/terraform-aws-eks-blueprints/patterns/karpenter/)
+- [Karpenter Blueprints](https://github.com/aws-samples/karpenter-blueprints)
+- [Karpenter Documentation](https://karpenter.sh/docs/)
 - [Terraform Stacks Documentation](https://developer.hashicorp.com/terraform/language/stacks)
 - [Create Stacks with CLI](https://developer.hashicorp.com/terraform/cloud-docs/stacks/create#terraform-cli-workflow)
 - [terraform-aws-modules/eks](https://registry.terraform.io/modules/terraform-aws-modules/eks/aws/latest)

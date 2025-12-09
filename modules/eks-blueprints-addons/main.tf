@@ -14,31 +14,10 @@ module "eks_blueprints_addons" {
   oidc_provider_arn = var.oidc_provider_arn
 
   #---------------------------------------------------------------------------
-  # Karpenter - Kubernetes Node Autoscaler
-  # https://karpenter.sh/
-  #---------------------------------------------------------------------------
-  enable_karpenter                  = var.enable_karpenter
-  karpenter_enable_spot_termination = true
-
-  karpenter = {
-    repository_username = data.aws_ecrpublic_authorization_token.token.user_name
-    repository_password = data.aws_ecrpublic_authorization_token.token.password
-  }
-
-  #---------------------------------------------------------------------------
   # AWS Load Balancer Controller
   # https://kubernetes-sigs.github.io/aws-load-balancer-controller/
   #---------------------------------------------------------------------------
   enable_aws_load_balancer_controller = var.enable_aws_load_balancer_controller
 
   tags = var.tags
-}
-
-#---------------------------------------------------------------------------
-# ECR Public Authorization Token
-# Required for pulling Karpenter images from public ECR
-# Must use us-east-1 region for public ECR authentication
-#---------------------------------------------------------------------------
-data "aws_ecrpublic_authorization_token" "token" {
-  provider = aws.virginia
 }

@@ -23,26 +23,26 @@ variable "subnet_ids" {
   type        = list(string)
 }
 
-variable "karpenter_node_instance_types" {
-  description = "Instance types for the Karpenter controller node group"
+variable "node_instance_types" {
+  description = "Instance types for the default node group"
   type        = list(string)
   default     = ["m5.large"]
 }
 
-variable "karpenter_node_min_size" {
-  description = "Minimum size of the Karpenter controller node group"
+variable "node_min_size" {
+  description = "Minimum size of the default node group"
   type        = number
   default     = 2
 }
 
-variable "karpenter_node_max_size" {
-  description = "Maximum size of the Karpenter controller node group"
+variable "node_max_size" {
+  description = "Maximum size of the default node group"
   type        = number
   default     = 3
 }
 
-variable "karpenter_node_desired_size" {
-  description = "Desired size of the Karpenter controller node group"
+variable "node_desired_size" {
+  description = "Desired size of the default node group"
   type        = number
   default     = 2
 }

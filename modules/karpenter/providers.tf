@@ -1,5 +1,6 @@
 ################################################################################
-# Provider Configuration
+# Karpenter Module - Provider Configuration
+# Based on: https://github.com/aws-samples/karpenter-blueprints
 ################################################################################
 
 terraform {
@@ -9,6 +10,7 @@ terraform {
     aws = {
       source  = "hashicorp/aws"
       version = ">= 5.0"
+      configuration_aliases = [aws.virginia]
     }
     helm = {
       source  = "hashicorp/helm"
@@ -17,6 +19,10 @@ terraform {
     kubernetes = {
       source  = "hashicorp/kubernetes"
       version = ">= 2.20"
+    }
+    kubectl = {
+      source  = "alekc/kubectl"
+      version = ">= 2.0"
     }
   }
 }

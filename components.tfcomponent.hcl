@@ -60,19 +60,6 @@ provider "aws" "main" {
   }
 }
 
-# AWS provider for us-east-1 (required for ECR public authentication)
-# Uses OIDC authentication for HCP Terraform
-provider "aws" "virginia" {
-  config {
-    region = "us-east-1"
-
-    assume_role_with_web_identity {
-      role_arn           = var.role_arn
-      web_identity_token = var.identity_token
-    }
-  }
-}
-
 # Kubernetes provider configuration
 # Uses token-based auth (required for Terraform Stacks remote execution)
 provider "kubernetes" "main" {
@@ -188,6 +175,8 @@ component "vpc" {
 component "eks" {
   source = "./modules/eks"
 
+  depends_on = [component.vpc]
+
   providers = {
     aws       = provider.aws.main
     tls       = provider.tls.main
@@ -212,13 +201,14 @@ component "eks" {
 component "addons" {
   source = "./modules/eks-blueprints-addons"
 
+  depends_on = [component.eks]
+
   providers = {
-    aws          = provider.aws.main
-    aws.virginia = provider.aws.virginia
-    helm         = provider.helm.main
-    kubernetes   = provider.kubernetes.main
-    time         = provider.time.main
-    random       = provider.random.main
+    aws        = provider.aws.main
+    helm       = provider.helm.main
+    kubernetes = provider.kubernetes.main
+    time       = provider.time.main
+    random     = provider.random.main
   }
 
   inputs = {
