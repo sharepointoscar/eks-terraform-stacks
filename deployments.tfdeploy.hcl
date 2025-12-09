@@ -41,6 +41,8 @@ deployment "use1" {
     # OIDC authentication
     role_arn       = local.aws_role_arn
     identity_token = identity_token.aws.jwt
+
+    destroy = true
   }
 }
 
@@ -64,6 +66,8 @@ deployment "usw2" {
     # OIDC authentication
     role_arn       = local.aws_role_arn
     identity_token = identity_token.aws.jwt
+
+    destroy = true
   }
 }
 
@@ -87,5 +91,7 @@ deployment "euc1" {
     # OIDC authentication
     role_arn       = local.aws_role_arn
     identity_token = identity_token.aws.jwt
+
+    destroy = true
   }
 }
