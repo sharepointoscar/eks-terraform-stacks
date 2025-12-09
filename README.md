@@ -215,6 +215,29 @@ Commit and push the changes. HCP Terraform will destroy all components (addons, 
 
 > **Note:** If you enabled Karpenter (advanced exercise), you must first remove Karpenter-provisioned nodes before destroying. See [Karpenter Cleanup](docs/karpenter-advanced-exercise.md#cleanup-before-destroy).
 
+### Cleanup Orphaned Resources
+
+If a destroy operation fails or is interrupted, some AWS resources may become orphaned (exist in AWS but not tracked in Terraform state). This can cause errors like `ResourceAlreadyExistsException` when re-deploying.
+
+Run the cleanup script to remove orphaned resources:
+
+```bash
+# On macOS (requires Bash 4+)
+# If you don't have Bash 4+, install it: brew install bash
+/opt/homebrew/bin/bash scripts/cleanup-orphaned-resources.sh
+
+# On Linux
+bash scripts/cleanup-orphaned-resources.sh
+```
+
+The script cleans up the following resources across all three regions:
+- EKS Node Groups
+- EKS Clusters
+- CloudWatch Log Groups (`/aws/eks/<cluster>/cluster`)
+- KMS Aliases (`alias/eks/<cluster>`)
+
+After cleanup completes, set `destroy = false` and re-deploy.
+
 ## Project Structure
 
 ```
@@ -227,7 +250,8 @@ Commit and push the changes. HCP Terraform will destroy all components (addons, 
 │   └── karpenter-advanced-exercise.md  # Optional Karpenter integration guide
 ├── scripts/
 │   ├── setup-aws-oidc.sh        # Script to create AWS IAM role for OIDC auth
-│   └── enable-karpenter.sh      # Helper script for Karpenter integration
+│   ├── enable-karpenter.sh      # Helper script for Karpenter integration
+│   └── cleanup-orphaned-resources.sh  # Cleanup orphaned AWS resources after failed destroy
 └── modules/
     ├── vpc/                     # VPC module (terraform-aws-modules/vpc/aws)
     │   ├── main.tf
