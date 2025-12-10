@@ -75,5 +75,5 @@ variable "tags" {
 variable "admin_principal_arn" {
   type        = string
   description = "ARN of IAM user/role for kubectl access to EKS clusters"
-  default     = "arn:aws:sts::865855451418:assumed-role/aws_oscar.medina_test-developer/oscar.medina@hashicorp.com"
+  default     = "arn:aws:iam::865855451418:role/aws_oscar.medina_test-admin"
 }
