@@ -19,21 +19,6 @@ module "eks" {
   enable_cluster_creator_admin_permissions = true
   cluster_endpoint_public_access           = true
 
-  # Additional cluster access entries for kubectl
-  access_entries = {
-    admin = {
-      principal_arn = var.admin_principal_arn
-      policy_associations = {
-        admin = {
-          policy_arn = "arn:aws:eks::aws:cluster-access-policy/AmazonEKSClusterAdminPolicy"
-          access_scope = {
-            type = "cluster"
-          }
-        }
-      }
-    }
-  }
-
   # EKS Managed Add-ons
   cluster_addons = {
     coredns = {
@@ -70,4 +55,27 @@ module "eks" {
 
 data "aws_eks_cluster_auth" "this" {
   name = module.eks.cluster_name
+}
+
+################################################################################
+# EKS Access Entry for Admin User
+# Created as separate resource to support ephemeral values from Terraform Stacks
+################################################################################
+
+resource "aws_eks_access_entry" "admin" {
+  cluster_name  = module.eks.cluster_name
+  principal_arn = var.admin_principal_arn
+  type          = "STANDARD"
+}
+
+resource "aws_eks_access_policy_association" "admin" {
+  cluster_name  = module.eks.cluster_name
+  principal_arn = var.admin_principal_arn
+  policy_arn    = "arn:aws:eks::aws:cluster-access-policy/AmazonEKSClusterAdminPolicy"
+
+  access_scope {
+    type = "cluster"
+  }
+
+  depends_on = [aws_eks_access_entry.admin]
 }
