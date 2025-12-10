@@ -112,6 +112,7 @@ variable "region" {
 
 variable "role_arn" {
   type        = string
+  ephemeral   = true
   description = "ARN of the IAM role for HCP Terraform to assume via OIDC"
 }
 
@@ -151,6 +152,7 @@ variable "tags" {
 
 variable "admin_principal_arn" {
   type        = string
+  ephemeral   = true
   description = "ARN of IAM user/role for kubectl access to EKS clusters"
 }
 
