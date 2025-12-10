@@ -71,9 +71,15 @@ provider "kubernetes" "main" {
 }
 
 # Helm provider configuration
-# Note: Helm provider inherits Kubernetes config when passed alongside kubernetes provider
+# Must explicitly configure Kubernetes connection (Stacks doesn't inherit from kubernetes provider)
 provider "helm" "main" {
-  config {}
+  config {
+    kubernetes {
+      host                   = component.eks.cluster_endpoint
+      cluster_ca_certificate = base64decode(component.eks.cluster_certificate_authority_data)
+      token                  = component.eks.cluster_token
+    }
+  }
 }
 
 # TLS provider (required by EKS module)
