@@ -29,15 +29,27 @@ output "next_steps" {
     Variable Set ID: ${tfe_variable_set.eks_stacks_config.id}
     Assigned to Project: ${var.tfc_project_name}
 
-    Variables configured:
+    Variables configured in varset:
       - aws_role_arn: ${var.aws_role_arn}
-      - admin_principal_arn: ${var.admin_principal_arn}
 
-    Next Steps:
-    1. Go to HCP Terraform: https://app.terraform.io/
-    2. Navigate to: ${var.tfc_organization} > ${var.tfc_project_name}
-    3. Create a new Stack connected to this repository
-    4. The Stack will automatically use the variable set
+    ============================================================================
+    Next Steps
+    ============================================================================
+
+    1. Update variables.tfcomponent.hcl with your IAM ARN for kubectl access:
+       - Get your ARN: aws sts get-caller-identity --query 'Arn' --output text
+       - Edit variables.tfcomponent.hcl and update admin_principal_arn default
+
+    2. Commit and push your changes to GitHub
+
+    3. Go to HCP Terraform: https://app.terraform.io/
+    4. Navigate to: ${var.tfc_organization} > ${var.tfc_project_name}
+    5. Create a new Stack:
+       - Click "New" > "Stack"
+       - Connect to GitHub and select this repository
+       - Name the stack (e.g., "eks-multi-region")
+
+    6. Review and approve the plan to deploy the EKS clusters
 
     ============================================================================
   EOT

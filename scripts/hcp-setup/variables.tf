@@ -22,18 +22,13 @@ variable "aws_role_arn" {
   }
 }
 
-variable "admin_principal_arn" {
-  type        = string
-  description = "ARN of IAM user/role for kubectl access to EKS clusters"
-
-  validation {
-    condition     = can(regex("^arn:aws:iam::[0-9]{12}:(user|role|assumed-role)/.+", var.admin_principal_arn))
-    error_message = "admin_principal_arn must be a valid IAM user or role ARN"
-  }
-}
-
 variable "variable_set_name" {
   type        = string
   description = "Name of the variable set to create"
   default     = "eks-stacks-config"
 }
+
+# Note: admin_principal_arn is NOT configured here.
+# Varset values are ephemeral in Terraform Stacks and cannot persist to state.
+# admin_principal_arn must be set as a Stack input variable in HCP Terraform UI
+# to grant your IAM role kubectl access to the EKS clusters.

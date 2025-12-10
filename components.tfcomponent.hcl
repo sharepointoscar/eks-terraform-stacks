@@ -102,61 +102,6 @@ provider "random" "main" {
 }
 
 #-------------------------------------------------------------------------------
-# Input Variables
-#-------------------------------------------------------------------------------
-
-variable "region" {
-  type        = string
-  description = "AWS region for deployment"
-}
-
-variable "role_arn" {
-  type        = string
-  ephemeral   = true
-  description = "ARN of the IAM role for HCP Terraform to assume via OIDC"
-}
-
-variable "identity_token" {
-  type        = string
-  ephemeral   = true
-  description = "OIDC identity token from HCP Terraform"
-}
-
-variable "cluster_name" {
-  type        = string
-  description = "Name of the EKS cluster (also used for VPC naming)"
-}
-
-variable "cluster_version" {
-  type        = string
-  description = "Kubernetes version for the EKS cluster"
-  default     = "1.30"
-}
-
-variable "vpc_cidr" {
-  type        = string
-  description = "CIDR block for the VPC"
-  default     = "10.0.0.0/16"
-}
-
-variable "azs" {
-  type        = list(string)
-  description = "List of availability zones"
-}
-
-variable "tags" {
-  type        = map(string)
-  description = "Tags to apply to all resources"
-  default     = {}
-}
-
-variable "admin_principal_arn" {
-  type        = string
-  ephemeral   = true
-  description = "ARN of IAM user/role for kubectl access to EKS clusters"
-}
-
-#-------------------------------------------------------------------------------
 # VPC Component
 #-------------------------------------------------------------------------------
 

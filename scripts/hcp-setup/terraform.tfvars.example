@@ -1,0 +1,29 @@
+################################################################################
+# HCP Terraform Variable Set Configuration
+# Copy this file to terraform.tfvars and fill in your values
+################################################################################
+
+# Your HCP Terraform organization name
+tfc_organization = "your-org-name"
+
+# The project where your Stack will be created
+# This project must already exist in HCP Terraform
+tfc_project_name = "your-project-name"
+
+# IAM Role ARN for OIDC authentication
+# Get this from the output of: ./scripts/setup-aws-oidc.sh <your-org>
+aws_role_arn = "arn:aws:iam::123456789012:role/hcp-terraform-stacks-role"
+
+# Optional: Custom variable set name (default: eks-stacks-config)
+# variable_set_name = "eks-stacks-config"
+
+################################################################################
+# NOTE: admin_principal_arn is NOT set here!
+#
+# Varset values are ephemeral in Terraform Stacks and cannot persist to state.
+# You must set admin_principal_arn as a Stack input variable in HCP Terraform UI
+# when you create the Stack. This grants your IAM role kubectl access to the
+# EKS clusters.
+#
+# Get your IAM ARN: aws sts get-caller-identity --query 'Arn' --output text
+################################################################################

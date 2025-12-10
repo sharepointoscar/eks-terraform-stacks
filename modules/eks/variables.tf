@@ -50,7 +50,6 @@ variable "node_desired_size" {
 variable "admin_principal_arn" {
   description = "ARN of IAM user/role for kubectl access to EKS clusters"
   type        = string
-  ephemeral   = true
 }
 
 variable "tags" {

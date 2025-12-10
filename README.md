@@ -127,29 +127,39 @@ If you prefer to create the IAM role manually:
 3. **Attach permissions** (AdministratorAccess for workshop, or least-privilege for production)
 </details>
 
-### Step 3: Get Your IAM ARN for kubectl Access
+### Step 3: Configure kubectl Access
 
-Run this command to get your IAM user/role ARN:
+Update `variables.tfcomponent.hcl` with your IAM ARN to get kubectl access to the EKS clusters:
 
 ```bash
+# Get your IAM ARN
 aws sts get-caller-identity --query 'Arn' --output text
+
+# Update the admin_principal_arn default value in variables.tfcomponent.hcl
+# with your IAM ARN (e.g., arn:aws:iam::123456789012:user/your-username)
 ```
 
-**Save this ARN** - you'll need it in the next step.
+Edit `variables.tfcomponent.hcl` and update the `admin_principal_arn` default value:
+
+```hcl
+variable "admin_principal_arn" {
+  type        = string
+  description = "ARN of IAM user/role for kubectl access to EKS clusters"
+  default     = "arn:aws:iam::123456789012:user/your-username"  # <-- Update this
+}
+```
 
 ### Step 4: Create Variable Set in HCP Terraform
 
-The Stack uses a variable set to store configuration. You can create it automatically using Terraform or manually via the UI.
+The Stack requires configuration stored in HCP Terraform. We provide `scripts/hcp-setup` to automate this setup.
 
 > **Prerequisite:** Create a Project in HCP Terraform first. Go to [HCP Terraform](https://app.terraform.io/) > **Projects** > **New Project**. Note the project name for the next step.
 
-The variable set configures two critical values:
-- **`aws_role_arn`** - Allows HCP Terraform to provision AWS resources via OIDC
-- **`admin_principal_arn`** - Grants your IAM user/role `kubectl` access to the EKS clusters after deployment
+#### Why We Use hcp-setup
+
+The `scripts/hcp-setup` Terraform configuration creates a **variable set** containing `aws_role_arn` for OIDC authentication. This allows HCP Terraform to securely provision AWS resources without storing long-lived credentials.
 
 #### Option A: Automated Setup (Recommended)
-
-Use the provided Terraform configuration to create the variable set:
 
 ```bash
 # Navigate to the HCP setup directory
@@ -162,7 +172,6 @@ cp terraform.tfvars.example terraform.tfvars
 # - tfc_organization: Your HCP Terraform organization name
 # - tfc_project_name: The project where your Stack will be created (must exist)
 # - aws_role_arn: From Step 2 output
-# - admin_principal_arn: From Step 3
 
 # Set your HCP Terraform API token
 export TFE_TOKEN="your-api-token"
@@ -187,14 +196,13 @@ cd ../..
 4. Configure the variable set:
    - **Name:** `eks-stacks-config`
    - **Scope:** Select **Project** and choose your project
-5. Add variables (click **Add variable** for each):
+5. Add variable:
 
    | Key | Value | Category | Sensitive |
    |-----|-------|----------|-----------|
    | `aws_role_arn` | `arn:aws:iam::123456789012:role/hcp-terraform-stacks-role` | Terraform | No |
-   | `admin_principal_arn` | `arn:aws:iam::123456789012:user/your-username` | Terraform | No |
 
-   > Replace with your actual ARNs from Steps 2 and 3
+   > Replace with your actual Role ARN from Step 2
 
 6. Click **Create variable set**
 
@@ -291,6 +299,7 @@ After cleanup completes, set `destroy = false` and re-deploy.
 
 ```
 .
+├── variables.tfcomponent.hcl    # Stack input variables (update admin_principal_arn here)
 ├── components.tfcomponent.hcl   # Stack component definitions (vpc, eks, addons)
 ├── deployments.tfdeploy.hcl     # Multi-region deployment configurations
 ├── README.md

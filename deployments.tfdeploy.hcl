@@ -14,17 +14,14 @@ identity_token "aws" {
 
 ################################################################################
 # Variable Set Configuration
-# Create a variable set in HCP Terraform named "eks-stacks-config" with:
-#   - aws_role_arn: ARN of the IAM role for OIDC authentication
-#   - admin_principal_arn: ARN of IAM user/role for kubectl access
-# Then assign the variable set to this Stack's project
+# Created by scripts/hcp-setup - contains aws_role_arn for OIDC authentication
+# See README.md Step 4 for setup instructions
 ################################################################################
 
 store "varset" "config" {
   name     = "eks-stacks-config"
   category = "terraform"
 }
-
 
 #-------------------------------------------------------------------------------
 # US East (N. Virginia) - us-east-1
@@ -48,9 +45,6 @@ deployment "use1" {
     # OIDC authentication
     role_arn       = store.varset.config.aws_role_arn
     identity_token = identity_token.aws.jwt
-
-    # EKS cluster access for kubectl
-    admin_principal_arn = store.varset.config.admin_principal_arn
   }
 }
 
@@ -59,7 +53,7 @@ deployment "use1" {
 #-------------------------------------------------------------------------------
 
 deployment "usw2" {
-  destroy = false
+  destroy = true
 
   inputs = {
     region          = "us-west-2"
@@ -76,9 +70,6 @@ deployment "usw2" {
     # OIDC authentication
     role_arn       = store.varset.config.aws_role_arn
     identity_token = identity_token.aws.jwt
-
-    # EKS cluster access for kubectl
-    admin_principal_arn = store.varset.config.admin_principal_arn
   }
 }
 
@@ -104,8 +95,5 @@ deployment "euc1" {
     # OIDC authentication
     role_arn       = store.varset.config.aws_role_arn
     identity_token = identity_token.aws.jwt
-
-    # EKS cluster access for kubectl
-    admin_principal_arn = store.varset.config.admin_principal_arn
   }
 }
