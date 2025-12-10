@@ -60,42 +60,41 @@ This stack contains three components that are deployed together:
 
 ## Prerequisites
 
-- [Terraform CLI](https://www.terraform.io/downloads.html) >= 1.14
 - [AWS CLI](https://aws.amazon.com/cli/) configured with appropriate credentials
 - [kubectl](https://kubernetes.io/docs/tasks/tools/)
 - [HCP Terraform](https://app.terraform.io/) account with Stacks enabled
 
 > **Note:** Terraform Stacks can only be deployed remotely via HCP Terraform. Local deployment is not supported. See [Terraform Stacks Documentation](https://developer.hashicorp.com/terraform/cloud-docs/stacks/create).
 
-## Quick Start
+---
+
+## Getting Started
+
+Follow these steps in order to deploy the multi-region EKS clusters.
+
+### Step 1: Clone the Repository
 
 ```bash
-# Clone the repository
-git clone <repository-url>
+git clone https://github.com/sharepointoscar/eks-terraform-stacks.git
 cd eks-terraform-stacks
 ```
 
-## AWS Authentication Setup
+### Step 2: Create AWS IAM Role for OIDC Authentication
 
-Terraform Stacks runs remotely in HCP Terraform and requires OIDC-based authentication to access your AWS account. Run the provided setup script to create the necessary IAM role and trust policy.
-
-### Option 1: Use the Setup Script (Recommended)
+Terraform Stacks runs remotely in HCP Terraform and requires OIDC-based authentication to access your AWS account.
 
 ```bash
 # Run the setup script with your HCP Terraform organization name
-./scripts/setup-aws-oidc.sh <HCP_ORG>
+./scripts/setup-aws-oidc.sh <YOUR_HCP_ORG_NAME>
 
 # Example:
-./scripts/setup-aws-oidc.sh my-org
+./scripts/setup-aws-oidc.sh my-terraform-org
 ```
 
-The script will:
-1. Create an OIDC Identity Provider for HCP Terraform (if not exists)
-2. Create an IAM role with the appropriate trust policy
-3. Attach AdministratorAccess policy
-4. Output the Role ARN to use in HCP Terraform
+**Save the Role ARN** from the output - you'll need it in the next step.
 
-### Option 2: Manual Setup
+<details>
+<summary>Manual Setup (Alternative)</summary>
 
 If you prefer to create the IAM role manually:
 
@@ -126,69 +125,115 @@ If you prefer to create the IAM role manually:
 ```
 
 3. **Attach permissions** (AdministratorAccess for workshop, or least-privilege for production)
+</details>
 
-### Configure the Role ARN in HCP Terraform
+### Step 3: Get Your IAM ARN for kubectl Access
 
-After creating the IAM role, set the `aws_role_arn` variable in HCP Terraform to the Role ARN output by the script.
-
-## Deployment
-
-This project uses **Terraform Stacks**, which deploys remotely via HCP Terraform.
-
-### Option 1: HCP Terraform UI
-
-1. **Create a Stack** in [HCP Terraform](https://app.terraform.io/)
-2. **Connect this repository** as the source
-3. **Configure deployments** for each region (use1, usw2, euc1)
-4. **Plan and Apply** through the HCP Terraform UI
-
-### Option 2: Terraform CLI Workflow
-
-Use the Terraform CLI to manage Stacks remotely in HCP Terraform:
+Run this command to get your IAM user/role ARN:
 
 ```bash
-# 1. Authenticate with HCP Terraform
-terraform login
-
-# 2. Initialize the stack (downloads module dependencies)
-terraform stacks init
-
-# 3. Create the stack
-terraform stacks create \
-  -organization-name <YOUR_ORG> \
-  -project-name <YOUR_PROJECT> \
-  -stack-name eks-multi-region
-
-# 4. Upload the configuration
-terraform stacks configuration upload \
-  -organization-name <YOUR_ORG> \
-  -project-name <YOUR_PROJECT> \
-  -stack-name eks-multi-region
-
-# 5. Monitor deployment status
-terraform stacks configuration watch \
-  -organization-name <YOUR_ORG> \
-  -project-name <YOUR_PROJECT>
+aws sts get-caller-identity --query 'Arn' --output text
 ```
 
-For detailed instructions, see [Create Stacks with CLI](https://developer.hashicorp.com/terraform/cloud-docs/stacks/create#terraform-cli-workflow).
+**Save this ARN** - you'll need it in the next step.
 
-### Configure kubectl
+### Step 4: Create Variable Set in HCP Terraform
 
-After deployment, configure kubectl to access your cluster:
+The Stack uses a variable set to store configuration. You can create it automatically using Terraform or manually via the UI.
+
+> **Prerequisite:** Create a Project in HCP Terraform first. Go to [HCP Terraform](https://app.terraform.io/) > **Projects** > **New Project**. Note the project name for the next step.
+
+The variable set configures two critical values:
+- **`aws_role_arn`** - Allows HCP Terraform to provision AWS resources via OIDC
+- **`admin_principal_arn`** - Grants your IAM user/role `kubectl` access to the EKS clusters after deployment
+
+#### Option A: Automated Setup (Recommended)
+
+Use the provided Terraform configuration to create the variable set:
 
 ```bash
-# For us-east-1
+# Navigate to the HCP setup directory
+cd scripts/hcp-setup
+
+# Copy the example tfvars file
+cp terraform.tfvars.example terraform.tfvars
+
+# Edit terraform.tfvars with your values:
+# - tfc_organization: Your HCP Terraform organization name
+# - tfc_project_name: The project where your Stack will be created (must exist)
+# - aws_role_arn: From Step 2 output
+# - admin_principal_arn: From Step 3
+
+# Set your HCP Terraform API token
+export TFE_TOKEN="your-api-token"
+# Get a token from: https://app.terraform.io/app/settings/tokens
+
+# Initialize and apply
+terraform init
+terraform apply
+
+# Return to project root
+cd ../..
+```
+
+#### Option B: Manual Setup (UI)
+
+<details>
+<summary>Click to expand manual instructions</summary>
+
+1. Go to [HCP Terraform](https://app.terraform.io/)
+2. Navigate to **Settings** (left sidebar) > **Variable sets**
+3. Click **Create variable set**
+4. Configure the variable set:
+   - **Name:** `eks-stacks-config`
+   - **Scope:** Select **Project** and choose your project
+5. Add variables (click **Add variable** for each):
+
+   | Key | Value | Category | Sensitive |
+   |-----|-------|----------|-----------|
+   | `aws_role_arn` | `arn:aws:iam::123456789012:role/hcp-terraform-stacks-role` | Terraform | No |
+   | `admin_principal_arn` | `arn:aws:iam::123456789012:user/your-username` | Terraform | No |
+
+   > Replace with your actual ARNs from Steps 2 and 3
+
+6. Click **Create variable set**
+
+</details>
+
+### Step 5: Create and Deploy the Stack
+
+1. Go to [HCP Terraform](https://app.terraform.io/)
+2. Select your **Organization** and **Project**
+3. Click **New** > **Stack**
+4. Connect to **GitHub** and select this repository
+5. Name the stack (e.g., `eks-multi-region`)
+6. Click **Create Stack**
+
+HCP Terraform will automatically:
+- Detect the three deployments (use1, usw2, euc1)
+- Create a plan for each deployment
+- Wait for your approval before applying
+
+7. Review the plan and click **Approve & Apply**
+
+> **Deployment takes approximately 15-20 minutes** per region for the EKS clusters to be created.
+
+### Step 6: Configure kubectl
+
+After deployment completes, configure kubectl to access your clusters:
+
+```bash
+# US East (N. Virginia)
 aws eks --region us-east-1 update-kubeconfig --name eks-use1
 
-# For us-west-2
+# US West (Oregon)
 aws eks --region us-west-2 update-kubeconfig --name eks-usw2
 
-# For eu-central-1
+# EU (Frankfurt)
 aws eks --region eu-central-1 update-kubeconfig --name eks-euc1
 ```
 
-### Verify Deployment
+### Step 7: Verify Deployment
 
 ```bash
 # Check nodes
@@ -197,6 +242,8 @@ kubectl get nodes
 # Check AWS Load Balancer Controller
 kubectl get pods -n kube-system -l app.kubernetes.io/name=aws-load-balancer-controller
 ```
+
+---
 
 ## Teardown
 
@@ -238,49 +285,35 @@ The script cleans up the following resources across all three regions:
 
 After cleanup completes, set `destroy = false` and re-deploy.
 
+---
+
 ## Project Structure
 
 ```
 .
-├── .terraform-version           # Required Terraform version for Stacks
 ├── components.tfcomponent.hcl   # Stack component definitions (vpc, eks, addons)
 ├── deployments.tfdeploy.hcl     # Multi-region deployment configurations
 ├── README.md
 ├── docs/
 │   └── karpenter-advanced-exercise.md  # Optional Karpenter integration guide
 ├── scripts/
-│   ├── setup-aws-oidc.sh        # Script to create AWS IAM role for OIDC auth
-│   ├── enable-karpenter.sh      # Helper script for Karpenter integration
-│   └── cleanup-orphaned-resources.sh  # Cleanup orphaned AWS resources after failed destroy
+│   ├── setup-aws-oidc.sh        # Create AWS IAM role for OIDC auth
+│   ├── hcp-setup/               # Terraform config for HCP variable set
+│   ├── enable-karpenter.sh      # Helper for Karpenter integration
+│   └── cleanup-orphaned-resources.sh  # Cleanup orphaned AWS resources
 └── modules/
-    ├── vpc/                     # VPC module (terraform-aws-modules/vpc/aws)
-    │   ├── main.tf
-    │   ├── variables.tf
-    │   └── outputs.tf
-    ├── eks/                     # EKS module (terraform-aws-modules/eks/aws)
-    │   ├── main.tf
-    │   ├── variables.tf
-    │   └── outputs.tf
-    ├── eks-blueprints-addons/   # Addons module (aws-ia/eks-blueprints-addons/aws)
-    │   ├── main.tf
-    │   ├── variables.tf
-    │   ├── outputs.tf
-    │   └── providers.tf
+    ├── vpc/                     # VPC module
+    ├── eks/                     # EKS module
+    ├── eks-blueprints-addons/   # Addons module
     └── karpenter/               # Optional: Karpenter module
-        ├── main.tf              # Helm release + NodePool/EC2NodeClass
-        ├── variables.tf
-        ├── outputs.tf
-        └── providers.tf
 ```
 
 ## References
 
+- [Terraform Stacks Documentation](https://developer.hashicorp.com/terraform/language/stacks)
 - [AWS EKS Blueprints for Terraform](https://github.com/aws-ia/terraform-aws-eks-blueprints)
 - [EKS Blueprints Addons](https://github.com/aws-ia/terraform-aws-eks-blueprints-addons)
-- [EKS Blueprints Getting Started](https://aws-ia.github.io/terraform-aws-eks-blueprints/getting-started/)
 - [Karpenter Blueprints](https://github.com/aws-samples/karpenter-blueprints)
 - [Karpenter Documentation](https://karpenter.sh/docs/)
-- [Terraform Stacks Documentation](https://developer.hashicorp.com/terraform/language/stacks)
-- [Create Stacks with CLI](https://developer.hashicorp.com/terraform/cloud-docs/stacks/create#terraform-cli-workflow)
 - [terraform-aws-modules/eks](https://registry.terraform.io/modules/terraform-aws-modules/eks/aws/latest)
 - [terraform-aws-modules/vpc](https://registry.terraform.io/modules/terraform-aws-modules/vpc/aws/latest)

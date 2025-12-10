@@ -47,6 +47,12 @@ variable "node_desired_size" {
   default     = 2
 }
 
+variable "access_entries" {
+  description = "Map of access entries to add to the cluster"
+  type        = any
+  default     = {}
+}
+
 variable "tags" {
   description = "Tags to apply to all resources"
   type        = map(string)

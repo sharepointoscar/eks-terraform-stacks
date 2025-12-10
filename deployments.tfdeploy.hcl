@@ -12,13 +12,34 @@ identity_token "aws" {
   audience = ["aws.workload.identity"]
 }
 
-#-------------------------------------------------------------------------------
-# Local Values
-# UPDATE: Replace with your IAM role ARN from scripts/setup-aws-oidc.sh output
-#-------------------------------------------------------------------------------
+################################################################################
+# Variable Set Configuration
+# Create a variable set in HCP Terraform named "eks-stacks-config" with:
+#   - aws_role_arn: ARN of the IAM role for OIDC authentication
+#   - admin_principal_arn: ARN of IAM user/role for kubectl access
+# Then assign the variable set to this Stack's project
+################################################################################
+
+store "varset" "config" {
+  name     = "eks-stacks-config"
+  category = "terraform"
+}
 
 locals {
-  aws_role_arn = "arn:aws:iam::865855451418:role/hcp-terraform-stacks-role"
+  # EKS access entries for kubectl access
+  access_entries = {
+    admin = {
+      principal_arn = store.varset.config.admin_principal_arn
+      policy_associations = {
+        admin = {
+          policy_arn = "arn:aws:eks::aws:cluster-access-policy/AmazonEKSClusterAdminPolicy"
+          access_scope = {
+            type = "cluster"
+          }
+        }
+      }
+    }
+  }
 }
 
 #-------------------------------------------------------------------------------
@@ -26,7 +47,7 @@ locals {
 #-------------------------------------------------------------------------------
 
 deployment "use1" {
-  destroy = false
+  destroy = true
 
   inputs = {
     region          = "us-east-1"
@@ -41,8 +62,11 @@ deployment "use1" {
     }
 
     # OIDC authentication
-    role_arn       = local.aws_role_arn
+    role_arn       = store.varset.config.aws_role_arn
     identity_token = identity_token.aws.jwt
+
+    # EKS cluster access for kubectl
+    access_entries = local.access_entries
   }
 }
 
@@ -66,8 +90,11 @@ deployment "usw2" {
     }
 
     # OIDC authentication
-    role_arn       = local.aws_role_arn
+    role_arn       = store.varset.config.aws_role_arn
     identity_token = identity_token.aws.jwt
+
+    # EKS cluster access for kubectl
+    access_entries = local.access_entries
   }
 }
 
@@ -76,7 +103,7 @@ deployment "usw2" {
 #-------------------------------------------------------------------------------
 
 deployment "euc1" {
-  destroy = false
+  destroy = true
 
   inputs = {
     region          = "eu-central-1"
@@ -91,7 +118,10 @@ deployment "euc1" {
     }
 
     # OIDC authentication
-    role_arn       = local.aws_role_arn
+    role_arn       = store.varset.config.aws_role_arn
     identity_token = identity_token.aws.jwt
+
+    # EKS cluster access for kubectl
+    access_entries = local.access_entries
   }
 }

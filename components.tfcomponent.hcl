@@ -71,15 +71,9 @@ provider "kubernetes" "main" {
 }
 
 # Helm provider configuration
-# Uses token-based auth (required for Terraform Stacks remote execution)
+# Note: Helm provider inherits Kubernetes config when passed alongside kubernetes provider
 provider "helm" "main" {
-  config {
-    kubernetes {
-      host                   = component.eks.cluster_endpoint
-      cluster_ca_certificate = base64decode(component.eks.cluster_certificate_authority_data)
-      token                  = component.eks.cluster_token
-    }
-  }
+  config {}
 }
 
 # TLS provider (required by EKS module)
@@ -155,6 +149,12 @@ variable "tags" {
   default     = {}
 }
 
+variable "access_entries" {
+  type        = any
+  description = "Map of IAM principals to grant EKS cluster access"
+  default     = {}
+}
+
 #-------------------------------------------------------------------------------
 # VPC Component
 #-------------------------------------------------------------------------------
@@ -196,6 +196,7 @@ component "eks" {
     cluster_version = var.cluster_version
     vpc_id          = component.vpc.vpc_id
     subnet_ids      = component.vpc.private_subnets
+    access_entries  = var.access_entries
     tags            = var.tags
   }
 }
