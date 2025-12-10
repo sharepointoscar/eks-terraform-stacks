@@ -47,10 +47,9 @@ variable "node_desired_size" {
   default     = 2
 }
 
-variable "access_entries" {
-  description = "Map of access entries to add to the cluster"
-  type        = any
-  default     = {}
+variable "admin_principal_arn" {
+  description = "ARN of IAM user/role for kubectl access to EKS clusters"
+  type        = string
 }
 
 variable "tags" {

@@ -19,8 +19,20 @@ module "eks" {
   enable_cluster_creator_admin_permissions = true
   cluster_endpoint_public_access           = true
 
-  # Additional cluster access entries
-  access_entries = var.access_entries
+  # Additional cluster access entries for kubectl
+  access_entries = {
+    admin = {
+      principal_arn = var.admin_principal_arn
+      policy_associations = {
+        admin = {
+          policy_arn = "arn:aws:eks::aws:cluster-access-policy/AmazonEKSClusterAdminPolicy"
+          access_scope = {
+            type = "cluster"
+          }
+        }
+      }
+    }
+  }
 
   # EKS Managed Add-ons
   cluster_addons = {

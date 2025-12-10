@@ -25,22 +25,6 @@ store "varset" "config" {
   category = "terraform"
 }
 
-locals {
-  # EKS access entries for kubectl access
-  access_entries = {
-    admin = {
-      principal_arn = store.varset.config.admin_principal_arn
-      policy_associations = {
-        admin = {
-          policy_arn = "arn:aws:eks::aws:cluster-access-policy/AmazonEKSClusterAdminPolicy"
-          access_scope = {
-            type = "cluster"
-          }
-        }
-      }
-    }
-  }
-}
 
 #-------------------------------------------------------------------------------
 # US East (N. Virginia) - us-east-1
@@ -66,7 +50,7 @@ deployment "use1" {
     identity_token = identity_token.aws.jwt
 
     # EKS cluster access for kubectl
-    access_entries = local.access_entries
+    admin_principal_arn = store.varset.config.admin_principal_arn
   }
 }
 
@@ -94,7 +78,7 @@ deployment "usw2" {
     identity_token = identity_token.aws.jwt
 
     # EKS cluster access for kubectl
-    access_entries = local.access_entries
+    admin_principal_arn = store.varset.config.admin_principal_arn
   }
 }
 
@@ -122,6 +106,6 @@ deployment "euc1" {
     identity_token = identity_token.aws.jwt
 
     # EKS cluster access for kubectl
-    access_entries = local.access_entries
+    admin_principal_arn = store.varset.config.admin_principal_arn
   }
 }

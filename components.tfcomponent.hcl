@@ -149,10 +149,9 @@ variable "tags" {
   default     = {}
 }
 
-variable "access_entries" {
-  type        = any
-  description = "Map of IAM principals to grant EKS cluster access"
-  default     = {}
+variable "admin_principal_arn" {
+  type        = string
+  description = "ARN of IAM user/role for kubectl access to EKS clusters"
 }
 
 #-------------------------------------------------------------------------------
@@ -196,7 +195,7 @@ component "eks" {
     cluster_version = var.cluster_version
     vpc_id          = component.vpc.vpc_id
     subnet_ids      = component.vpc.private_subnets
-    access_entries  = var.access_entries
+    admin_principal_arn = var.admin_principal_arn
     tags            = var.tags
   }
 }
