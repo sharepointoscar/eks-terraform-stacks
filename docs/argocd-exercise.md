@@ -233,28 +233,31 @@ spec:
       containers:
       - name: skiapp
         image: node:18-alpine
-        command: ["sh", "-c", "npm install && npm start"]
+        command: ["npm", "start"]
         workingDir: /app
         ports:
         - containerPort: 8080
-        volumeMounts:
-        - name: app-source
-          mountPath: /app
         resources:
           requests:
             memory: "128Mi"
             cpu: "100m"
           limits:
-            memory: "256Mi"
-            cpu: "200m"
+            memory: "512Mi"
+            cpu: "500m"
+        volumeMounts:
+        - name: app-source
+          mountPath: /app
       initContainers:
       - name: git-clone
         image: alpine/git
-        command:
-        - git
-        - clone
-        - https://github.com/<YOUR_GITHUB_USER>/skiapp.git
-        - /app
+        command: ["git", "clone", "https://github.com/<YOUR_GITHUB_USER>/skiapp.git", "/app"]
+        volumeMounts:
+        - name: app-source
+          mountPath: /app
+      - name: npm-install
+        image: node:18-alpine
+        command: ["npm", "install"]
+        workingDir: /app
         volumeMounts:
         - name: app-source
           mountPath: /app

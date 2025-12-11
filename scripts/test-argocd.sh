@@ -178,44 +178,65 @@ else
 fi
 
 ################################################################################
-# Setup: Create develop branch with k8s manifests in skiapp repo
+# Setup: Clean up previous test resources and create fresh develop branch
 ################################################################################
+
+print_header "SETUP: Cleaning up previous test resources"
+
+# Delete existing ArgoCD application if it exists
+print_test "Checking for existing ArgoCD application"
+if kubectl get application $APP_NAME -n $ARGOCD_NAMESPACE &>/dev/null; then
+    print_info "Found existing application '$APP_NAME' - deleting..."
+    kubectl delete application $APP_NAME -n $ARGOCD_NAMESPACE --timeout=60s &>/dev/null
+    print_pass "Deleted existing ArgoCD application"
+    sleep 5
+else
+    print_info "No existing application found"
+fi
+
+# Delete existing develop branch if it exists
+print_test "Checking for existing develop branch"
+if git ls-remote --heads "$TEST_REPO" "$TEST_REVISION" 2>/dev/null | grep -q "$TEST_REVISION"; then
+    print_info "Found existing branch '$TEST_REVISION' - deleting..."
+    # Create temp dir to delete the branch
+    TEMP_DIR=$(mktemp -d)
+    git clone --depth 1 "$TEST_REPO_SSH" "$TEMP_DIR/skiapp" 2>/dev/null
+    cd "$TEMP_DIR/skiapp"
+    git push origin --delete "$TEST_REVISION" 2>/dev/null && print_pass "Deleted existing develop branch" || print_warn "Could not delete branch"
+    cd - > /dev/null
+    rm -rf "$TEMP_DIR"
+else
+    print_info "No existing develop branch found"
+fi
 
 print_header "SETUP: Creating develop branch with k8s manifests"
 
-print_test "Checking if develop branch already exists"
-if git ls-remote --heads "$TEST_REPO" "$TEST_REVISION" 2>/dev/null | grep -q "$TEST_REVISION"; then
-    print_info "Branch '$TEST_REVISION' already exists - will use existing branch"
-    BRANCH_CREATED=false
+# Create temporary directory
+TEMP_DIR=$(mktemp -d)
+print_info "Using temporary directory: $TEMP_DIR"
+
+# Clone the repo
+print_test "Cloning skiapp repository"
+if git clone "$TEST_REPO_SSH" "$TEMP_DIR/skiapp" 2>/dev/null; then
+    print_pass "Repository cloned successfully"
 else
-    print_info "Branch '$TEST_REVISION' does not exist - will create it"
+    print_fail "Failed to clone repository - check SSH access to $TEST_REPO_SSH"
+    rm -rf "$TEMP_DIR"
+    exit 1
+fi
 
-    # Create temporary directory
-    TEMP_DIR=$(mktemp -d)
-    print_info "Using temporary directory: $TEMP_DIR"
+cd "$TEMP_DIR/skiapp"
 
-    # Clone the repo
-    print_test "Cloning skiapp repository"
-    if git clone "$TEST_REPO_SSH" "$TEMP_DIR/skiapp" 2>/dev/null; then
-        print_pass "Repository cloned successfully"
-    else
-        print_fail "Failed to clone repository - check SSH access to $TEST_REPO_SSH"
-        rm -rf "$TEMP_DIR"
-        exit 1
-    fi
+# Create develop branch
+print_test "Creating develop branch"
+git checkout -b "$TEST_REVISION"
 
-    cd "$TEMP_DIR/skiapp"
+# Create k8s directory and manifests
+print_test "Creating k8s manifests"
+mkdir -p k8s
 
-    # Create develop branch
-    print_test "Creating develop branch"
-    git checkout -b "$TEST_REVISION"
-
-    # Create k8s directory and manifests
-    print_test "Creating k8s manifests"
-    mkdir -p k8s
-
-    # Create deployment.yaml
-    cat > k8s/deployment.yaml <<'DEPLOYMENT_EOF'
+# Create deployment.yaml
+cat > k8s/deployment.yaml <<'DEPLOYMENT_EOF'
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -235,7 +256,8 @@ spec:
       containers:
       - name: skiapp
         image: node:18-alpine
-        command: ["sh", "-c", "cd /app && npm install && npm start"]
+        command: ["npm", "start"]
+        workingDir: /app
         ports:
         - containerPort: 8080
         resources:
@@ -243,8 +265,8 @@ spec:
             memory: "128Mi"
             cpu: "100m"
           limits:
-            memory: "256Mi"
-            cpu: "200m"
+            memory: "512Mi"
+            cpu: "500m"
         volumeMounts:
         - name: app-source
           mountPath: /app
@@ -255,13 +277,20 @@ spec:
         volumeMounts:
         - name: app-source
           mountPath: /app
+      - name: npm-install
+        image: node:18-alpine
+        command: ["npm", "install"]
+        workingDir: /app
+        volumeMounts:
+        - name: app-source
+          mountPath: /app
       volumes:
       - name: app-source
         emptyDir: {}
 DEPLOYMENT_EOF
 
-    # Create service.yaml
-    cat > k8s/service.yaml <<'SERVICE_EOF'
+# Create service.yaml
+cat > k8s/service.yaml <<'SERVICE_EOF'
 apiVersion: v1
 kind: Service
 metadata:
@@ -269,7 +298,7 @@ metadata:
   labels:
     app: skiapp
 spec:
-  type: ClusterIP
+  type: LoadBalancer
   ports:
   - port: 80
     targetPort: 8080
@@ -278,25 +307,24 @@ spec:
     app: skiapp
 SERVICE_EOF
 
-    print_pass "Created k8s/deployment.yaml and k8s/service.yaml"
+print_pass "Created k8s/deployment.yaml and k8s/service.yaml"
 
-    # Commit and push
-    print_test "Committing and pushing develop branch"
-    git add k8s/
-    git commit -m "Add Kubernetes manifests for ArgoCD testing"
+# Commit and push
+print_test "Committing and pushing develop branch"
+git add k8s/
+git commit -m "Add Kubernetes manifests for ArgoCD testing"
 
-    if git push -u origin "$TEST_REVISION" 2>/dev/null; then
-        print_pass "Branch '$TEST_REVISION' pushed to remote"
-        BRANCH_CREATED=true
-    else
-        print_fail "Failed to push branch - check SSH access"
-        rm -rf "$TEMP_DIR"
-        exit 1
-    fi
-
-    # Return to original directory
-    cd - > /dev/null
+if git push -u origin "$TEST_REVISION" 2>/dev/null; then
+    print_pass "Branch '$TEST_REVISION' pushed to remote"
+    BRANCH_CREATED=true
+else
+    print_fail "Failed to push branch - check SSH access"
+    rm -rf "$TEMP_DIR"
+    exit 1
 fi
+
+# Return to original directory
+cd - > /dev/null
 
 ################################################################################
 # Test 1: ArgoCD Installation Verification
