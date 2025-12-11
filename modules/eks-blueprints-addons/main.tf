@@ -19,5 +19,11 @@ module "eks_blueprints_addons" {
   #---------------------------------------------------------------------------
   enable_aws_load_balancer_controller = var.enable_aws_load_balancer_controller
 
+  #---------------------------------------------------------------------------
+  # ArgoCD - GitOps Continuous Delivery
+  # https://argo-cd.readthedocs.io/
+  #---------------------------------------------------------------------------
+  enable_argocd = var.enable_argocd
+
   tags = var.tags
 }

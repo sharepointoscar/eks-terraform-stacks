@@ -39,3 +39,9 @@ variable "tags" {
   type        = map(string)
   default     = {}
 }
+
+variable "enable_argocd" {
+  description = "Enable ArgoCD addon for GitOps"
+  type        = bool
+  default     = false
+}
