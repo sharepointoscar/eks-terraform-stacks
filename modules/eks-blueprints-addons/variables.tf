@@ -22,12 +22,6 @@ variable "oidc_provider_arn" {
   type        = string
 }
 
-variable "enable_karpenter" {
-  description = "Enable Karpenter addon"
-  type        = bool
-  default     = false
-}
-
 variable "enable_aws_load_balancer_controller" {
   description = "Enable AWS Load Balancer Controller addon"
   type        = bool

@@ -36,13 +36,32 @@ module "eks" {
   }
 
   # Managed Node Group for cluster workloads
+  # Labels and taints support Karpenter controller placement
   eks_managed_node_groups = {
     default = {
       instance_types = var.node_instance_types
       min_size       = var.node_min_size
       max_size       = var.node_max_size
       desired_size   = var.node_desired_size
+
+      # Label for Karpenter controller placement
+      labels = {
+        "karpenter.sh/controller" = "true"
+      }
+
+      # Taint to reserve nodes for critical addons
+      taints = {
+        CriticalAddonsOnly = {
+          key    = "CriticalAddonsOnly"
+          effect = "NO_SCHEDULE"
+        }
+      }
     }
+  }
+
+  # Add Karpenter discovery tag to node security group
+  node_security_group_tags = {
+    "karpenter.sh/discovery" = var.cluster_name
   }
 
   tags = var.tags

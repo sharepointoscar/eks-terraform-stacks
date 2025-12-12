@@ -47,3 +47,8 @@ output "cluster_token" {
   value       = data.aws_eks_cluster_auth.this.token
   sensitive   = true
 }
+
+output "node_iam_role_arn" {
+  description = "ARN of the EKS managed node group IAM role"
+  value       = module.eks.eks_managed_node_groups["default"].iam_role_arn
+}
