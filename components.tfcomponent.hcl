@@ -205,3 +205,21 @@ component "addons" {
   }
 }
 
+#-------------------------------------------------------------------------------
+# Karpenter Component (REMOVED)
+# This removed block ensures proper cleanup of Karpenter resources
+#-------------------------------------------------------------------------------
+
+removed {
+  source = "./modules/karpenter"
+  from   = component.karpenter
+
+  providers = {
+    aws          = provider.aws.main
+    aws.virginia = provider.aws.virginia
+    helm         = provider.helm.main
+    kubernetes   = provider.kubernetes.main
+    kubectl      = provider.kubectl.main
+  }
+}
+

@@ -173,36 +173,67 @@ if [ "$DISABLE_MODE" = true ]; then
 
     cd "$PROJECT_ROOT"
 
-    # Check if Karpenter is currently deployed
+    # Check if Karpenter component exists (not already removed)
     if ! check_karpenter_component_exists; then
+        # Check if already has a removed block
+        if grep -q 'from.*=.*component.karpenter' "$COMPONENTS_FILE" 2>/dev/null; then
+            print_warn "Karpenter already has a 'removed' block in components.tfcomponent.hcl"
+            print_info "HCP Terraform should destroy the resources on next apply"
+            exit 0
+        fi
         print_warn "Karpenter component not found in components.tfcomponent.hcl"
         print_info "Nothing to disable"
         exit 0
     fi
 
-    print_step "Removing Karpenter component from components.tfcomponent.hcl..."
+    print_step "Replacing Karpenter component with 'removed' block..."
+    print_info "Terraform Stacks requires a 'removed' block to properly destroy resources"
 
     if [ "$DRY_RUN" = false ]; then
-        # Remove the Karpenter component block
-        # Use sed to remove from "#-------------------------------------------------------------------------------" before "Karpenter Component"
-        # to the closing "}" of the component block
+        # Replace the Karpenter component block with a removed block
+        # Use awk to find and replace the component section
 
-        # First, let's create a temporary file
         TEMP_FILE=$(mktemp)
 
-        # Use awk to remove the Karpenter component section
         awk '
-        /^#-+$/ {
-            # Store potential section start
-            section_start = NR
-            section_lines = $0
-            next
-        }
-        /^# Karpenter Component/ {
-            # This is the Karpenter section, skip until we find the end
-            in_karpenter = 1
+        BEGIN {
+            in_karpenter = 0
             brace_count = 0
-            next
+            printed_removed = 0
+        }
+        /^#-+$/ && !in_karpenter {
+            # Store potential section start
+            stored_line = $0
+            getline next_line
+            if (next_line ~ /Karpenter Component/) {
+                # This is the Karpenter section header
+                # Print modified header
+                print "#-------------------------------------------------------------------------------"
+                print "# Karpenter Component (REMOVED)"
+                print "# This removed block ensures proper cleanup of Karpenter resources"
+                print "#-------------------------------------------------------------------------------"
+                print ""
+                print "removed {"
+                print "  source = \"./modules/karpenter\""
+                print "  from   = component.karpenter"
+                print ""
+                print "  providers = {"
+                print "    aws          = provider.aws.main"
+                print "    aws.virginia = provider.aws.virginia"
+                print "    helm         = provider.helm.main"
+                print "    kubernetes   = provider.kubernetes.main"
+                print "    kubectl      = provider.kubectl.main"
+                print "  }"
+                print "}"
+                printed_removed = 1
+                in_karpenter = 1
+                next
+            } else {
+                # Not Karpenter section, print both lines
+                print stored_line
+                print next_line
+                next
+            }
         }
         in_karpenter {
             if (/^component "karpenter"/) {
@@ -218,19 +249,14 @@ if [ "$DISABLE_MODE" = true ]; then
             next
         }
         {
-            # Print any stored section header if not followed by Karpenter
-            if (section_lines != "") {
-                print section_lines
-                section_lines = ""
-            }
             print
         }
         ' "$COMPONENTS_FILE" > "$TEMP_FILE"
 
         mv "$TEMP_FILE" "$COMPONENTS_FILE"
-        print_success "Karpenter component removed"
+        print_success "Karpenter component replaced with 'removed' block"
     else
-        print_info "Would remove Karpenter component block"
+        print_info "Would replace Karpenter component with 'removed' block"
     fi
 
     print_step "Removing Karpenter outputs..."
@@ -248,6 +274,8 @@ if [ "$DISABLE_MODE" = true ]; then
     print_step "Reviewing changes..."
     echo ""
     git --no-pager diff --stat 2>/dev/null || true
+    echo ""
+    git --no-pager diff "$COMPONENTS_FILE" 2>/dev/null | head -80
     echo ""
 
     if [ "$DRY_RUN" = true ]; then
@@ -267,7 +295,8 @@ if [ "$DISABLE_MODE" = true ]; then
     git add "$COMPONENTS_FILE"
     git commit -m "chore: Disable Karpenter addon
 
-Removes Karpenter component to trigger HCP Terraform destroy.
+Replaces Karpenter component with 'removed' block to trigger
+proper HCP Terraform destroy of all Karpenter resources.
 
 🤖 Generated with [Claude Code](https://claude.com/claude-code)
 
@@ -288,12 +317,18 @@ Co-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>"
     print_info "Please approve the plan in HCP Terraform UI:"
     echo "    https://app.terraform.io/"
     echo ""
+    print_warn "After HCP Terraform completes the destroy, you can optionally"
+    print_warn "remove the 'removed' block from components.tfcomponent.hcl"
+    echo ""
 
     wait_for_user
 
     print_phase "KARPENTER DISABLED"
     print_success "Karpenter resources have been destroyed"
     print_info "EKS labels/taints remain (harmless without Karpenter)"
+    echo ""
+    print_info "Optional: After destroy completes, remove the 'removed' block:"
+    echo "    Edit components.tfcomponent.hcl and delete the Karpenter removed section"
     echo ""
 
     exit 0
