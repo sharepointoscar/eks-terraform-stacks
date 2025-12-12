@@ -574,7 +574,79 @@ print_step "Checking Karpenter component configuration..."
 if check_karpenter_component_exists; then
     print_success "Karpenter component configured in components.tfcomponent.hcl"
 else
-    print_warn "Karpenter component not configured"
+    print_warn "Karpenter component not configured - will add it"
+
+    if [ "$DRY_RUN" = false ]; then
+        print_step "Adding Karpenter component to components.tfcomponent.hcl..."
+
+        # Check if there's a removed block for Karpenter (need to replace it)
+        if grep -q 'from.*=.*component.karpenter' "$COMPONENTS_FILE" 2>/dev/null; then
+            print_info "Found existing 'removed' block - replacing with component"
+            # Remove the removed block section
+            TEMP_FILE=$(mktemp)
+            awk '
+            BEGIN { in_removed = 0; brace_count = 0 }
+            /^#-+$/ && !in_removed {
+                stored_line = $0
+                getline next_line
+                if (next_line ~ /Karpenter Component.*REMOVED/) {
+                    in_removed = 1
+                    next
+                } else {
+                    print stored_line
+                    print next_line
+                    next
+                }
+            }
+            in_removed {
+                if (/^removed \{/) { brace_count = 1 }
+                else if (/{/) { brace_count++ }
+                else if (/^}$/) {
+                    brace_count--
+                    if (brace_count == 0) { in_removed = 0 }
+                }
+                next
+            }
+            { print }
+            ' "$COMPONENTS_FILE" > "$TEMP_FILE"
+            mv "$TEMP_FILE" "$COMPONENTS_FILE"
+        fi
+
+        # Add the Karpenter component block at the end of the file
+        cat >> "$COMPONENTS_FILE" << 'KARPENTER_COMPONENT'
+
+#-------------------------------------------------------------------------------
+# Karpenter Component (Node Autoscaling)
+#-------------------------------------------------------------------------------
+
+component "karpenter" {
+  source = "./modules/karpenter"
+
+  depends_on = [component.eks]
+
+  providers = {
+    aws          = provider.aws.main
+    aws.virginia = provider.aws.virginia
+    helm         = provider.helm.main
+    kubernetes   = provider.kubernetes.main
+    kubectl      = provider.kubectl.main
+  }
+
+  inputs = {
+    cluster_name      = component.eks.cluster_name
+    cluster_endpoint  = component.eks.cluster_endpoint
+    cluster_version   = component.eks.cluster_version
+    oidc_provider_arn = component.eks.oidc_provider_arn
+    node_iam_role_arn = component.eks.node_iam_role_arn
+    tags              = var.tags
+  }
+}
+KARPENTER_COMPONENT
+
+        print_success "Karpenter component added to components.tfcomponent.hcl"
+    else
+        print_info "Would add Karpenter component block"
+    fi
 fi
 
 # Check for uncommitted changes in components file

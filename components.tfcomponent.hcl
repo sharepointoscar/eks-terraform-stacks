@@ -1,6 +1,6 @@
 ################################################################################
 # Multi-Region EKS Stack with Terraform Stacks
-# Deploys VPC, EKS, and Addons (Karpenter + AWS Load Balancer Controller)
+# Deploys VPC, EKS, and Addons (AWS Load Balancer Controller)
 # Reference: https://github.com/aws-ia/terraform-aws-eks-blueprints
 ################################################################################
 
@@ -204,31 +204,3 @@ component "addons" {
     tags              = var.tags
   }
 }
-
-#-------------------------------------------------------------------------------
-# # Karpenter Component (Node Autoscaling)
-#-------------------------------------------------------------------------------
-
-component "karpenter" {
-  source = "./modules/karpenter"
-
-  depends_on = [component.eks]
-
-  providers = {
-    aws          = provider.aws.main
-    aws.virginia = provider.aws.virginia
-    helm         = provider.helm.main
-    kubernetes   = provider.kubernetes.main
-    kubectl      = provider.kubectl.main
-  }
-
-  inputs = {
-    cluster_name      = component.eks.cluster_name
-    cluster_endpoint  = component.eks.cluster_endpoint
-    cluster_version   = component.eks.cluster_version
-    oidc_provider_arn = component.eks.oidc_provider_arn
-    node_iam_role_arn = component.eks.node_iam_role_arn
-    tags              = var.tags
-  }
-}
-

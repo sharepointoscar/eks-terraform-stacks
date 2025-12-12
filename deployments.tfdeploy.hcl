@@ -48,12 +48,12 @@ deployment "usw2" {
   }
 }
 
-# #-------------------------------------------------------------------------------
-# # US East (N. Virginia) - us-east-1 (Commented out for single-region testing)
-# #-------------------------------------------------------------------------------
+#-------------------------------------------------------------------------------
+# US East (N. Virginia) - us-east-1
+#-------------------------------------------------------------------------------
 
 deployment "use1" {
-  destroy = true
+  destroy = true  # Set to false to deploy this region
 
   inputs = {
     region          = "us-east-1"
@@ -74,12 +74,12 @@ deployment "use1" {
 }
 
 
-# #-------------------------------------------------------------------------------
-# # EU (Frankfurt) - eu-central-1 (Commented out for single-region testing)
-# #-------------------------------------------------------------------------------
+#-------------------------------------------------------------------------------
+# EU (Frankfurt) - eu-central-1
+#-------------------------------------------------------------------------------
 
 deployment "euc1" {
-  destroy = true
+  destroy = true  # Set to false to deploy this region
 
   inputs = {
     region          = "eu-central-1"
