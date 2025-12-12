@@ -25,5 +25,11 @@ module "eks_blueprints_addons" {
   #---------------------------------------------------------------------------
   enable_argocd = var.enable_argocd
 
+  #---------------------------------------------------------------------------
+  # Karpenter - Node Autoscaling
+  # https://karpenter.sh/
+  #---------------------------------------------------------------------------
+  enable_karpenter = var.enable_karpenter
+
   tags = var.tags
 }
