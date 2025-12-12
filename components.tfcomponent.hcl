@@ -206,13 +206,13 @@ component "addons" {
 }
 
 #-------------------------------------------------------------------------------
-# Karpenter Component (REMOVED)
-# This removed block ensures proper cleanup of Karpenter resources
+# # Karpenter Component (Node Autoscaling)
 #-------------------------------------------------------------------------------
 
-removed {
+component "karpenter" {
   source = "./modules/karpenter"
-  from   = component.karpenter
+
+  depends_on = [component.eks]
 
   providers = {
     aws          = provider.aws.main
@@ -220,6 +220,15 @@ removed {
     helm         = provider.helm.main
     kubernetes   = provider.kubernetes.main
     kubectl      = provider.kubectl.main
+  }
+
+  inputs = {
+    cluster_name      = component.eks.cluster_name
+    cluster_endpoint  = component.eks.cluster_endpoint
+    cluster_version   = component.eks.cluster_version
+    oidc_provider_arn = component.eks.oidc_provider_arn
+    node_iam_role_arn = component.eks.node_iam_role_arn
+    tags              = var.tags
   }
 }
 
