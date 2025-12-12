@@ -323,6 +323,74 @@ Co-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>"
 
     wait_for_user
 
+    print_phase "VERIFYING KARPENTER REMOVAL"
+
+    print_step "Updating kubeconfig for $CLUSTER_NAME..."
+    aws eks --region "$REGION" update-kubeconfig --name "$CLUSTER_NAME" 2>/dev/null || {
+        print_warn "Could not update kubeconfig automatically"
+        print_info "Run: aws eks --region $REGION update-kubeconfig --name $CLUSTER_NAME"
+    }
+
+    print_step "Checking Karpenter namespace..."
+    if kubectl get namespace karpenter 2>/dev/null; then
+        print_warn "Karpenter namespace still exists"
+        print_info "Deleting namespace..."
+        kubectl delete namespace karpenter --timeout=60s 2>/dev/null || print_warn "Could not delete namespace"
+    else
+        print_success "Karpenter namespace removed"
+    fi
+
+    print_step "Checking Karpenter pods..."
+    if kubectl get pods -n karpenter 2>/dev/null | grep -q "."; then
+        print_warn "Karpenter pods still exist"
+        kubectl get pods -n karpenter
+    else
+        print_success "No Karpenter pods found"
+    fi
+
+    print_step "Checking Karpenter Helm release..."
+    if helm list -n karpenter 2>/dev/null | grep -q karpenter; then
+        print_warn "Karpenter Helm release still exists"
+        print_info "Uninstalling Helm release..."
+        helm uninstall karpenter -n karpenter 2>/dev/null || print_warn "Could not uninstall Helm release"
+    else
+        print_success "No Karpenter Helm release found"
+    fi
+
+    print_step "Checking NodePool CRDs..."
+    if kubectl get nodepools.karpenter.sh 2>/dev/null | grep -q "."; then
+        print_warn "NodePools still exist"
+        kubectl get nodepools.karpenter.sh
+        print_info "Deleting NodePools..."
+        kubectl delete nodepools.karpenter.sh --all 2>/dev/null || print_warn "Could not delete NodePools"
+    else
+        print_success "No NodePools found"
+    fi
+
+    print_step "Checking EC2NodeClass CRDs..."
+    if kubectl get ec2nodeclasses.karpenter.k8s.aws 2>/dev/null | grep -q "."; then
+        print_warn "EC2NodeClasses still exist"
+        kubectl get ec2nodeclasses.karpenter.k8s.aws
+        print_info "Deleting EC2NodeClasses..."
+        kubectl delete ec2nodeclasses.karpenter.k8s.aws --all 2>/dev/null || print_warn "Could not delete EC2NodeClasses"
+    else
+        print_success "No EC2NodeClasses found"
+    fi
+
+    print_step "Checking Karpenter CRDs..."
+    KARPENTER_CRDS=$(kubectl get crd 2>/dev/null | grep karpenter || true)
+    if [ -n "$KARPENTER_CRDS" ]; then
+        print_warn "Karpenter CRDs still exist:"
+        echo "$KARPENTER_CRDS"
+        print_info "Deleting Karpenter CRDs..."
+        kubectl delete crd nodepools.karpenter.sh 2>/dev/null || true
+        kubectl delete crd ec2nodeclasses.karpenter.k8s.aws 2>/dev/null || true
+        kubectl delete crd nodeclaims.karpenter.sh 2>/dev/null || true
+        print_success "Karpenter CRDs deleted"
+    else
+        print_success "No Karpenter CRDs found"
+    fi
+
     print_phase "KARPENTER DISABLED"
     print_success "Karpenter resources have been destroyed"
     print_info "EKS labels/taints remain (harmless without Karpenter)"
