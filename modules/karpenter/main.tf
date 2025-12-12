@@ -28,9 +28,10 @@ module "karpenter" {
 
   cluster_name = var.cluster_name
 
-  # Enable Pod Identity for Karpenter (modern approach)
-  enable_pod_identity             = true
-  create_pod_identity_association = true
+  # Use IRSA (IAM Roles for Service Accounts) - more compatible approach
+  enable_irsa                     = true
+  irsa_oidc_provider_arn          = var.oidc_provider_arn
+  irsa_namespace_service_accounts = ["karpenter:karpenter"]
 
   # IAM role for Karpenter nodes
   node_iam_role_use_name_prefix = false
