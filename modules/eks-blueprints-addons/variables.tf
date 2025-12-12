@@ -37,5 +37,5 @@ variable "tags" {
 variable "enable_argocd" {
   description = "Enable ArgoCD addon for GitOps"
   type        = bool
-  default     = true
+  default     = false
 }

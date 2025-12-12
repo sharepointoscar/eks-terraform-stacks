@@ -5,30 +5,33 @@ This repository demonstrates deploying Amazon EKS clusters across three AWS regi
 ## Architecture
 
 ```
-┌─────────────────────────────────────────────────────────────────────────────┐
-│                     Single Terraform Stack                                   │
-│                     (eks-multi-region)                                       │
-├─────────────────────────────────────────────────────────────────────────────┤
-│                                                                             │
-│  Components (defined in components.tfcomponent.hcl):                        │
-│                                                                             │
-│  ┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐         │
-│  │   component     │    │   component     │    │   component     │         │
-│  │     "vpc"       │───▶│     "eks"       │───▶│    "addons"     │         │
-│  └─────────────────┘    └─────────────────┘    └─────────────────┘         │
-│         │                      │                      │                     │
-│         ▼                      ▼                      ▼                     │
-│  ┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐         │
-│  │  modules/vpc    │    │  modules/eks    │    │ modules/eks-    │         │
-│  │                 │    │                 │    │ blueprints-     │         │
-│  │ terraform-aws-  │    │ terraform-aws-  │    │ addons          │         │
-│  │ modules/vpc/aws │    │ modules/eks/aws │    │                 │         │
-│  └─────────────────┘    └─────────────────┘    │ aws-ia/eks-     │         │
-│                                                │ blueprints-     │         │
-│                                                │ addons/aws      │         │
-│                                                └─────────────────┘         │
-│                                                                             │
-└─────────────────────────────────────────────────────────────────────────────┘
+┌───────────────────────────────────────────────────────────────────────────────────────┐
+│                           Single Terraform Stack                                       │
+│                           (eks-multi-region)                                           │
+├───────────────────────────────────────────────────────────────────────────────────────┤
+│                                                                                       │
+│  Components (defined in components.tfcomponent.hcl):                                  │
+│                                                                                       │
+│  ┌─────────────┐    ┌─────────────┐    ┌─────────────┐    ┌─────────────┐            │
+│  │  component  │    │  component  │    │  component  │    │  component  │            │
+│  │    "vpc"    │───▶│    "eks"    │───▶│   "addons"  │    │ "karpenter" │            │
+│  └─────────────┘    └─────────────┘    └─────────────┘    └─────────────┘            │
+│        │                  │                  │                   │                    │
+│        │                  │                  │                   │                    │
+│        │                  └──────────────────┼───────────────────┘                    │
+│        │                         depends_on  │                                        │
+│        ▼                                     ▼                                        │
+│  ┌─────────────┐    ┌─────────────┐    ┌─────────────┐    ┌─────────────┐            │
+│  │ modules/vpc │    │ modules/eks │    │ modules/eks-│    │  modules/   │            │
+│  │             │    │             │    │ blueprints- │    │  karpenter  │            │
+│  │ terraform-  │    │ terraform-  │    │ addons      │    │             │            │
+│  │ aws-modules │    │ aws-modules │    │             │    │ terraform-  │            │
+│  │ /vpc/aws    │    │ /eks/aws    │    │ aws-ia/eks- │    │ aws-modules │            │
+│  └─────────────┘    └─────────────┘    │ blueprints- │    │ /eks//      │            │
+│                                        │ addons/aws  │    │ karpenter   │            │
+│                                        └─────────────┘    └─────────────┘            │
+│                                                                                       │
+└───────────────────────────────────────────────────────────────────────────────────────┘
 
 Deployments (defined in deployments.tfdeploy.hcl):
 ┌──────────────┐  ┌──────────────┐  ┌──────────────┐
@@ -40,23 +43,33 @@ Deployments (defined in deployments.tfdeploy.hcl):
 
 ## Components
 
-This stack contains three components that are deployed together:
+This stack contains four components that are deployed together:
 
 | Component | Module | Purpose |
 |-----------|--------|---------|
-| `vpc` | `terraform-aws-modules/vpc/aws` | VPC with public/private subnets |
-| `eks` | `terraform-aws-modules/eks/aws` | EKS cluster + managed node group |
-| `addons` | `aws-ia/eks-blueprints-addons/aws` | AWS Load Balancer Controller |
-| `karpenter` | `terraform-aws-modules/eks//modules/karpenter` | **Optional** - Kubernetes node autoscaler |
+| `vpc` | `terraform-aws-modules/vpc/aws` | VPC with public/private subnets and Karpenter discovery tags |
+| `eks` | `terraform-aws-modules/eks/aws` | EKS cluster + managed node group with Karpenter labels/taints |
+| `addons` | `aws-ia/eks-blueprints-addons/aws` | AWS Load Balancer Controller, ArgoCD |
+| `karpenter` | `terraform-aws-modules/eks/aws//modules/karpenter` | Kubernetes node autoscaler with IRSA |
 
 ### Addons Deployed
 
 - **[AWS Load Balancer Controller](https://kubernetes-sigs.github.io/aws-load-balancer-controller/)** - Manages ALB/NLB for Kubernetes services
-
-### Optional: Karpenter (Advanced Exercise)
-
+- **[ArgoCD](https://argo-cd.readthedocs.io/)** - GitOps continuous delivery for Kubernetes
 - **[Karpenter](https://karpenter.sh/)** - Kubernetes node autoscaler for dynamic EC2 provisioning
-- See [Karpenter Advanced Exercise](docs/karpenter-advanced-exercise.md) for step-by-step instructions
+
+### Karpenter Features
+
+The Karpenter module provides:
+- **IRSA (IAM Roles for Service Accounts)** - Secure AWS API access for Karpenter controller
+- **Default NodePool** - Pre-configured with instance types, capacity types, and architecture
+- **Default EC2NodeClass** - Configured with AMI selector, subnet/security group discovery
+- **Spot Termination Handling** - SQS queue for graceful spot instance termination
+
+### Exercise Guides
+
+- **[ArgoCD Exercise](docs/argocd-exercise.md)** - Deploy and configure ArgoCD for GitOps workflows
+- **[Karpenter Advanced Exercise](docs/karpenter-advanced-exercise.md)** - Test Karpenter node autoscaling
 
 ## Prerequisites
 
@@ -300,21 +313,25 @@ After cleanup completes, set `destroy = false` and re-deploy.
 ```
 .
 ├── variables.tfcomponent.hcl    # Stack input variables (update admin_principal_arn here)
-├── components.tfcomponent.hcl   # Stack component definitions (vpc, eks, addons)
+├── components.tfcomponent.hcl   # Stack component definitions (vpc, eks, addons, karpenter)
 ├── deployments.tfdeploy.hcl     # Multi-region deployment configurations
+├── .terraform.lock.hcl          # Provider lock file (includes kubectl provider)
 ├── README.md
 ├── docs/
-│   └── karpenter-advanced-exercise.md  # Optional Karpenter integration guide
+│   ├── argocd-exercise.md              # ArgoCD GitOps exercise guide
+│   └── karpenter-advanced-exercise.md  # Karpenter usage and testing guide
 ├── scripts/
 │   ├── setup-aws-oidc.sh        # Create AWS IAM role for OIDC auth
 │   ├── hcp-setup/               # Terraform config for HCP variable set
-│   ├── enable-karpenter.sh      # Helper for Karpenter integration
+│   ├── deploy-argocd.sh         # Deploy/disable ArgoCD addon
+│   ├── deploy-karpenter.sh      # Deploy/disable Karpenter (two-phase deployment)
+│   ├── test-karpenter.sh        # Test Karpenter node provisioning
 │   └── cleanup-orphaned-resources.sh  # Cleanup orphaned AWS resources
 └── modules/
-    ├── vpc/                     # VPC module
-    ├── eks/                     # EKS module
-    ├── eks-blueprints-addons/   # Addons module
-    └── karpenter/               # Optional: Karpenter module
+    ├── vpc/                     # VPC module with Karpenter discovery tags
+    ├── eks/                     # EKS module with Karpenter labels/taints
+    ├── eks-blueprints-addons/   # Addons module (ALB Controller, ArgoCD)
+    └── karpenter/               # Karpenter module (IRSA, NodePool, EC2NodeClass)
 ```
 
 ## References
