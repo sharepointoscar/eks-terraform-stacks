@@ -196,7 +196,7 @@ output "node_security_group_id" {
 
 ```bash
 # Run the helper script
-./scripts/enable-karpenter.sh
+./scripts/deploy-karpenter.sh
 
 # Select option 1 to enable for all deployments
 # Or select option 2 to enable for a specific region
@@ -278,6 +278,56 @@ Clean up test:
 ```bash
 kubectl delete deployment inflate
 ```
+
+---
+
+## Step 7: Automated Testing
+
+Run the automated test script to verify Karpenter functionality:
+
+```bash
+./scripts/test-karpenter.sh
+```
+
+The script includes:
+- Karpenter installation verification
+- CRD validation (NodePool, EC2NodeClass)
+- Scale-up test with skiapp deployment (10 replicas)
+- Node provisioning verification
+- Scale-down consolidation test
+
+Options:
+- `--skip-cleanup`: Leave test resources for inspection
+- `--no-pause`: Run without interactive pauses (fully automated)
+- `--help`: Show usage information
+
+---
+
+## Optional: Visualize with Headlamp
+
+[Headlamp](https://headlamp.dev/) with the Karpenter plugin provides a visual dashboard for monitoring Karpenter scaling.
+
+### Install Headlamp
+
+```bash
+# macOS
+brew install headlamp
+
+# Or download from https://headlamp.dev/docs/latest/installation/
+```
+
+### Install Karpenter Plugin
+
+See: https://github.com/headlamp-k8s/plugins/tree/main/karpenter
+
+### Features
+
+- **Resource Relationship Map**: Visual map of NodePools, NodeClaims, and Nodes
+- **Real-time Metrics**: Resource usage, pending pods, provisioning latency
+- **Scaling Decisions**: See why Karpenter made specific provisioning choices
+- **Pending Pods Dashboard**: View scheduling failures and reasons
+
+Reference: https://kubernetes.io/blog/2025/10/06/introducing-headlamp-plugin-for-karpenter/
 
 ---
 
