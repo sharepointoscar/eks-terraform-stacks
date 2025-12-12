@@ -41,6 +41,10 @@ required_providers {
     source  = "hashicorp/random"
     version = "~> 3.0"
   }
+  kubectl = {
+    source  = "alekc/kubectl"
+    version = "~> 2.0"
+  }
 }
 
 #-------------------------------------------------------------------------------
@@ -105,6 +109,28 @@ provider "time" "main" {
 # Random provider (required by addons module)
 provider "random" "main" {
   config {}
+}
+
+# AWS Virginia provider (required for ECR Public authentication by Karpenter)
+provider "aws" "virginia" {
+  config {
+    region = "us-east-1"
+
+    assume_role_with_web_identity {
+      role_arn           = var.role_arn
+      web_identity_token = var.identity_token
+    }
+  }
+}
+
+# Kubectl provider (required by Karpenter for manifest management)
+provider "kubectl" "main" {
+  config {
+    host                   = component.eks.cluster_endpoint
+    cluster_ca_certificate = base64decode(component.eks.cluster_certificate_authority_data)
+    token                  = component.eks.cluster_token
+    load_config_file       = false
+  }
 }
 
 #-------------------------------------------------------------------------------
@@ -180,6 +206,33 @@ component "addons" {
 }
 
 #-------------------------------------------------------------------------------
+# Karpenter Component (Node Autoscaling)
+#-------------------------------------------------------------------------------
+
+component "karpenter" {
+  source = "./modules/karpenter"
+
+  depends_on = [component.eks]
+
+  providers = {
+    aws          = provider.aws.main
+    aws.virginia = provider.aws.virginia
+    helm         = provider.helm.main
+    kubernetes   = provider.kubernetes.main
+    kubectl      = provider.kubectl.main
+  }
+
+  inputs = {
+    cluster_name      = component.eks.cluster_name
+    cluster_endpoint  = component.eks.cluster_endpoint
+    cluster_version   = component.eks.cluster_version
+    oidc_provider_arn = component.eks.oidc_provider_arn
+    node_iam_role_arn = component.eks.node_iam_role_arn
+    tags              = var.tags
+  }
+}
+
+#-------------------------------------------------------------------------------
 # Outputs
 #-------------------------------------------------------------------------------
 
@@ -205,4 +258,16 @@ output "configure_kubectl" {
   type        = string
   description = "Command to configure kubectl"
   value       = "aws eks --region ${var.region} update-kubeconfig --name ${var.cluster_name}"
+}
+
+output "karpenter_iam_role_arn" {
+  type        = string
+  description = "ARN of the Karpenter controller IAM role"
+  value       = component.karpenter.iam_role_arn
+}
+
+output "karpenter_node_iam_role_arn" {
+  type        = string
+  description = "ARN of the Karpenter node IAM role"
+  value       = component.karpenter.node_iam_role_arn
 }
