@@ -91,26 +91,42 @@ resource "helm_release" "karpenter" {
 ################################################################################
 
 resource "kubectl_manifest" "karpenter_node_class" {
-  yaml_body = <<-YAML
-    apiVersion: karpenter.k8s.aws/v1
-    kind: EC2NodeClass
-    metadata:
-      name: default
-    spec:
-      role: ${module.karpenter.node_iam_role_name}
-      amiSelectorTerms:
-        - alias: al2023@latest
-      subnetSelectorTerms:
-        - tags:
-            karpenter.sh/discovery: ${var.cluster_name}
-      securityGroupSelectorTerms:
-        - tags:
-            karpenter.sh/discovery: ${var.cluster_name}
-      tags:
-        Name: "${var.cluster_name}-karpenter-node"
-        karpenter.sh/discovery: ${var.cluster_name}
-        ${join("\n        ", [for k, v in var.tags : "${k}: \"${v}\""])}
-  YAML
+  yaml_body = yamlencode({
+    apiVersion = "karpenter.k8s.aws/v1"
+    kind       = "EC2NodeClass"
+    metadata = {
+      name = "default"
+    }
+    spec = {
+      role = module.karpenter.node_iam_role_name
+      amiSelectorTerms = [
+        {
+          alias = "al2023@latest"
+        }
+      ]
+      subnetSelectorTerms = [
+        {
+          tags = {
+            "karpenter.sh/discovery" = var.cluster_name
+          }
+        }
+      ]
+      securityGroupSelectorTerms = [
+        {
+          tags = {
+            "karpenter.sh/discovery" = var.cluster_name
+          }
+        }
+      ]
+      tags = merge(
+        {
+          Name                     = "${var.cluster_name}-karpenter-node"
+          "karpenter.sh/discovery" = var.cluster_name
+        },
+        var.tags
+      )
+    }
+  })
 
   depends_on = [helm_release.karpenter]
 }
@@ -121,38 +137,54 @@ resource "kubectl_manifest" "karpenter_node_class" {
 ################################################################################
 
 resource "kubectl_manifest" "karpenter_node_pool" {
-  yaml_body = <<-YAML
-    apiVersion: karpenter.sh/v1
-    kind: NodePool
-    metadata:
-      name: default
-    spec:
-      template:
-        spec:
-          nodeClassRef:
-            group: karpenter.k8s.aws
-            kind: EC2NodeClass
-            name: default
-          requirements:
-            - key: kubernetes.io/arch
-              operator: In
-              values: ${jsonencode(var.node_architecture)}
-            - key: kubernetes.io/os
-              operator: In
-              values: ["linux"]
-            - key: karpenter.sh/capacity-type
-              operator: In
-              values: ${jsonencode(var.node_capacity_types)}
-            - key: node.kubernetes.io/instance-type
-              operator: In
-              values: ${jsonencode(var.node_instance_types)}
-      disruption:
-        consolidationPolicy: WhenEmptyOrUnderutilized
-        consolidateAfter: 1m
-      limits:
-        cpu: 1000
-        memory: 1000Gi
-  YAML
+  yaml_body = yamlencode({
+    apiVersion = "karpenter.sh/v1"
+    kind       = "NodePool"
+    metadata = {
+      name = "default"
+    }
+    spec = {
+      template = {
+        spec = {
+          nodeClassRef = {
+            group = "karpenter.k8s.aws"
+            kind  = "EC2NodeClass"
+            name  = "default"
+          }
+          requirements = [
+            {
+              key      = "kubernetes.io/arch"
+              operator = "In"
+              values   = var.node_architecture
+            },
+            {
+              key      = "kubernetes.io/os"
+              operator = "In"
+              values   = ["linux"]
+            },
+            {
+              key      = "karpenter.sh/capacity-type"
+              operator = "In"
+              values   = var.node_capacity_types
+            },
+            {
+              key      = "node.kubernetes.io/instance-type"
+              operator = "In"
+              values   = var.node_instance_types
+            }
+          ]
+        }
+      }
+      disruption = {
+        consolidationPolicy = "WhenEmptyOrUnderutilized"
+        consolidateAfter    = "1m"
+      }
+      limits = {
+        cpu    = 1000
+        memory = "1000Gi"
+      }
+    }
+  })
 
   depends_on = [kubectl_manifest.karpenter_node_class]
 }
