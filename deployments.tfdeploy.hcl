@@ -53,7 +53,7 @@ store "varset" "config" {
 #-------------------------------------------------------------------------------
 
 deployment "usw2" {
-  destroy = false
+  destroy = true
 
   inputs = {
     region          = "us-west-2"

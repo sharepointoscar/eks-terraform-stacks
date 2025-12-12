@@ -19,6 +19,7 @@
 #   --dry-run         Show changes without applying them
 #   --skip-push       Make changes but don't commit/push
 #   --disable         Disable ArgoCD instead of enabling
+#   --cleanup-crds    Also delete ArgoCD CRDs (use with --disable)
 #   --help            Show this help message
 ################################################################################
 
@@ -42,6 +43,7 @@ NC='\033[0m' # No Color
 DRY_RUN=false
 SKIP_PUSH=false
 DISABLE_MODE=false
+CLEANUP_CRDS=false
 
 ################################################################################
 # Helper Functions
@@ -95,6 +97,10 @@ while [[ $# -gt 0 ]]; do
             ;;
         --disable)
             DISABLE_MODE=true
+            shift
+            ;;
+        --cleanup-crds)
+            CLEANUP_CRDS=true
             shift
             ;;
         --help|-h)
@@ -307,18 +313,62 @@ else
     echo ""
     if [ "$DISABLE_MODE" = true ]; then
         print_success "ArgoCD disable request pushed to repository"
+        echo ""
+        print_info "Next steps:"
+        echo "    1. Go to HCP Terraform: https://app.terraform.io/"
+        echo "    2. Navigate to your Stack"
+        echo "    3. Review and approve the plan"
+        echo "    4. Wait for deployment to complete (~5 minutes)"
+        echo ""
+        print_warn "Note: ArgoCD CRDs are kept by default to preserve data."
+        print_info "After HCP Terraform applies, clean up CRDs and namespace with:"
+        echo "    kubectl delete crd applications.argoproj.io"
+        echo "    kubectl delete crd applicationsets.argoproj.io"
+        echo "    kubectl delete crd appprojects.argoproj.io"
+        echo "    kubectl delete namespace argocd"
+        echo ""
+        print_info "Or run this script again with --cleanup-crds to clean up now:"
+        echo "    ./scripts/deploy-argocd.sh --disable --cleanup-crds"
     else
         print_success "ArgoCD enable request pushed to repository"
+        echo ""
+        print_info "Next steps:"
+        echo "    1. Go to HCP Terraform: https://app.terraform.io/"
+        echo "    2. Navigate to your Stack"
+        echo "    3. Review and approve the plan"
+        echo "    4. Wait for deployment to complete (~5 minutes)"
+        echo ""
+        print_info "After deployment, test with:"
+        echo "    ./scripts/test-argocd.sh"
     fi
-    echo ""
-    print_info "Next steps:"
-    echo "    1. Go to HCP Terraform: https://app.terraform.io/"
-    echo "    2. Navigate to your Stack"
-    echo "    3. Review and approve the plan"
-    echo "    4. Wait for deployment to complete (~5 minutes)"
-    echo ""
-    print_info "After deployment, test with:"
-    echo "    ./scripts/test-argocd.sh"
+fi
+
+################################################################################
+# CRD Cleanup (if requested)
+################################################################################
+
+if [ "$CLEANUP_CRDS" = true ] && [ "$DISABLE_MODE" = true ]; then
+    print_header "CLEANING UP ArgoCD CRDs"
+
+    if [ "$DRY_RUN" = true ]; then
+        print_info "Would delete the following CRDs:"
+        echo "    - applications.argoproj.io"
+        echo "    - applicationsets.argoproj.io"
+        echo "    - appprojects.argoproj.io"
+        print_info "Would delete namespace: argocd"
+    else
+        print_step "Deleting ArgoCD CRDs..."
+
+        # Delete CRDs (ignore errors if they don't exist)
+        kubectl delete crd applications.argoproj.io 2>/dev/null && print_success "Deleted CRD: applications.argoproj.io" || print_warn "CRD applications.argoproj.io not found"
+        kubectl delete crd applicationsets.argoproj.io 2>/dev/null && print_success "Deleted CRD: applicationsets.argoproj.io" || print_warn "CRD applicationsets.argoproj.io not found"
+        kubectl delete crd appprojects.argoproj.io 2>/dev/null && print_success "Deleted CRD: appprojects.argoproj.io" || print_warn "CRD appprojects.argoproj.io not found"
+
+        print_step "Deleting ArgoCD namespace..."
+        kubectl delete namespace argocd 2>/dev/null && print_success "Deleted namespace: argocd" || print_warn "Namespace argocd not found"
+
+        print_success "ArgoCD cleanup complete"
+    fi
 fi
 
 echo ""
