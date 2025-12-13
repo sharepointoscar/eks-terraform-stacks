@@ -18,6 +18,9 @@ module "eks_blueprints_addons" {
   # https://kubernetes-sigs.github.io/aws-load-balancer-controller/
   #---------------------------------------------------------------------------
   enable_aws_load_balancer_controller = var.enable_aws_load_balancer_controller
+  aws_load_balancer_controller = {
+    wait = true  # Wait for controller pods to be ready before proceeding
+  }
 
   #---------------------------------------------------------------------------
   # ArgoCD - GitOps Continuous Delivery
