@@ -39,3 +39,15 @@ variable "enable_argocd" {
   type        = bool
   default     = false
 }
+
+variable "enable_karpenter" {
+  description = "Enable Karpenter addon for node autoscaling"
+  type        = bool
+  default     = true
+}
+
+variable "karpenter_enable_spot_termination" {
+  description = "Enable spot instance termination handling via SQS"
+  type        = bool
+  default     = true
+}
