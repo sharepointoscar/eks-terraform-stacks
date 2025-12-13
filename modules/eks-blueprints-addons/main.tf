@@ -25,5 +25,13 @@ module "eks_blueprints_addons" {
   #---------------------------------------------------------------------------
   enable_argocd = var.enable_argocd
 
+  #---------------------------------------------------------------------------
+  # Karpenter - Node Autoscaling
+  # https://karpenter.sh/
+  # https://github.com/aws-ia/terraform-aws-eks-blueprints-addons/blob/main/docs/addons/karpenter.md
+  #---------------------------------------------------------------------------
+  enable_karpenter                  = var.enable_karpenter
+  karpenter_enable_spot_termination = var.karpenter_enable_spot_termination
+
   tags = var.tags
 }
